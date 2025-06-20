@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const area_interconsulta_controller_1 = require("../../controllers/catalogos/area_interconsulta.controller");
+const router = (0, express_1.Router)();
+router.get("/", area_interconsulta_controller_1.getAreasInterconsulta);
+router.get("/:id", area_interconsulta_controller_1.getAreaInterconsultaById);
+router.post("/", area_interconsulta_controller_1.createAreaInterconsulta);
+router.put("/:id", area_interconsulta_controller_1.updateAreaInterconsulta);
+router.delete("/:id", area_interconsulta_controller_1.deleteAreaInterconsulta);
+exports.default = router;
