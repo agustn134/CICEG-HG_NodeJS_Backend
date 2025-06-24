@@ -1,0 +1,6 @@
+-- 📋 Casos Adicionales Opcionales (Solo si tienes tiempo extra):
+-- Si más adelante quisieras hacer pruebas adicionales, podrías considerar:
+-- Caso 3: Paciente quirúrgico (apendicitis)
+-- Caso 4: Paciente gineco-obstétrico (control prenatal)
+-- Caso 5: Paciente traumatológico (fractura)
+-- Caso 6: Reingreso (para probar validaciones de auditor

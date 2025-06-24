@@ -1,4 +1,3 @@
-// src/config/swagger.schemas.ts
 const schemas = {
   PersonalMedico: {
     type: 'object',

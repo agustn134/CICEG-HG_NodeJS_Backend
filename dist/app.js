@@ -13,7 +13,25 @@ app.use((0, cors_1.default)({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express_1.default.json());
+// app.use(express.json());
+app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
+app.get('/', (req, res) => {
+    return responses_1.ResponseHelper.success(res, 'Bienvenido a la API del Hospital General San Luis de la Paz', {
+        hospital: 'Hospital General San Luis de la Paz',
+        sistema: 'SICEG-HG - Sistema Integral de Control de Expedientes',
+        version: '1.0.0',
+        ubicacion: 'San Luis de la Paz, Guanajuato, México',
+        documentacion: {
+            health_check: '/api/health',
+            info_sistema: '/api/sistema/info',
+            catalogos: '/api/catalogos/*',
+            expedientes: '/api/gestion-expedientes/*'
+        },
+        desarrollado_por: 'Equipo de Desarrollo Hospital General',
+        fecha_actualizacion: new Date().toISOString()
+    });
+});
 // ===== Catálogos =====
 const servicio_routes_1 = __importDefault(require("./routes/catalogos/servicio.routes"));
 const area_interconsulta_routes_1 = __importDefault(require("./routes/catalogos/area_interconsulta.routes"));
@@ -51,6 +69,24 @@ const registro_transfusion_routes_1 = __importDefault(require("./routes/document
 // ===== Notas Especializadas =====
 const nota_psicologia_routes_1 = __importDefault(require("./routes/notas_especializadas/nota_psicologia.routes"));
 const nota_nutricion_routes_1 = __importDefault(require("./routes/notas_especializadas/nota_nutricion.routes"));
+const responses_1 = require("./utils/responses");
+// ==========================================
+// CONECTAR TODAS LAS RUTAS DE LA API
+// ==========================================
+// app.use('/api', apiRoutes);
+// ==========================================
+// MIDDLEWARE PARA MANEJO DE ERRORES GLOBALES
+// ==========================================
+app.use((error, req, res, next) => {
+    console.error('Error global capturado:', error);
+    return responses_1.ResponseHelper.error(res, 'Error interno del servidor', 500, process.env.NODE_ENV === 'development' ? error.message : undefined);
+});
+// ==========================================
+// MIDDLEWARE PARA RUTAS NO ENCONTRADAS (404)
+// ==========================================
+// app.use('*', (req, res) => {
+//   return ResponseHelper.notFound(res, `Ruta ${req.originalUrl} no encontrada`);
+// });
 // ========== MIDDLEWARES =========
 // Catálogos
 app.use('/api/catalogos/servicios', servicio_routes_1.default);
