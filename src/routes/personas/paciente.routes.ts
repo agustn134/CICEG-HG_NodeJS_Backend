@@ -5,24 +5,42 @@ import {
   getPacienteById,
   createPaciente,
   updatePaciente,
-  deletePaciente
+  deletePaciente,
+  buscarPacientes,
+  getEstadisticasPacientes,
+  getHistorialMedicoResumido
 } from "../../controllers/personas/paciente.controller";
 
 const router = Router();
 
-// Ruta para obtener todos los pacientes
+// ==========================================
+// RUTAS PARA PACIENTES
+// ==========================================
+
+// GET /api/personas/pacientes/estadisticas - Obtener estadísticas (debe ir ANTES que /:id)
+router.get("/estadisticas", getEstadisticasPacientes);
+
+// GET /api/personas/pacientes/buscar - Buscar pacientes (para autocomplete)
+// Query param: ?q=texto_busqueda
+router.get("/buscar", buscarPacientes);
+
+// GET /api/personas/pacientes/:id/historial - Obtener historial médico resumido
+router.get("/:id/historial", getHistorialMedicoResumido);
+
+// GET /api/personas/pacientes - Obtener todos los pacientes
+// Query params: ?sexo=M&edad_min=18&edad_max=65&tiene_alergias=true&buscar=juan
 router.get("/", getPacientes);
 
-// Ruta para obtener un paciente por ID
+// GET /api/personas/pacientes/:id - Obtener paciente por ID
 router.get("/:id", getPacienteById);
 
-// Ruta para crear un paciente
+// POST /api/personas/pacientes - Crear nuevo paciente
 router.post("/", createPaciente);
 
-// Ruta para actualizar un paciente por ID
+// PUT /api/personas/pacientes/:id - Actualizar paciente
 router.put("/:id", updatePaciente);
 
-// Ruta para eliminar un paciente por ID
+// DELETE /api/personas/pacientes/:id - Eliminar paciente
 router.delete("/:id", deletePaciente);
 
 export default router;

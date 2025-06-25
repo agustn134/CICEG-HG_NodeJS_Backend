@@ -4,14 +4,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const paciente_controller_1 = require("../../controllers/personas/paciente.controller");
 const router = (0, express_1.Router)();
-// Ruta para obtener todos los pacientes
+// ==========================================
+// RUTAS PARA PACIENTES
+// ==========================================
+// GET /api/personas/pacientes/estadisticas - Obtener estadísticas (debe ir ANTES que /:id)
+router.get("/estadisticas", paciente_controller_1.getEstadisticasPacientes);
+// GET /api/personas/pacientes/buscar - Buscar pacientes (para autocomplete)
+// Query param: ?q=texto_busqueda
+router.get("/buscar", paciente_controller_1.buscarPacientes);
+// GET /api/personas/pacientes/:id/historial - Obtener historial médico resumido
+router.get("/:id/historial", paciente_controller_1.getHistorialMedicoResumido);
+// GET /api/personas/pacientes - Obtener todos los pacientes
+// Query params: ?sexo=M&edad_min=18&edad_max=65&tiene_alergias=true&buscar=juan
 router.get("/", paciente_controller_1.getPacientes);
-// Ruta para obtener un paciente por ID
+// GET /api/personas/pacientes/:id - Obtener paciente por ID
 router.get("/:id", paciente_controller_1.getPacienteById);
-// Ruta para crear un paciente
+// POST /api/personas/pacientes - Crear nuevo paciente
 router.post("/", paciente_controller_1.createPaciente);
-// Ruta para actualizar un paciente por ID
+// PUT /api/personas/pacientes/:id - Actualizar paciente
 router.put("/:id", paciente_controller_1.updatePaciente);
-// Ruta para eliminar un paciente por ID
+// DELETE /api/personas/pacientes/:id - Eliminar paciente
 router.delete("/:id", paciente_controller_1.deletePaciente);
 exports.default = router;

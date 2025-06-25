@@ -5,24 +5,38 @@ import {
   getPersonalMedicoById,
   createPersonalMedico,
   updatePersonalMedico,
-  deletePersonalMedico
+  deletePersonalMedico,
+  getPersonalMedicoActivo,
+  getEstadisticasPersonalMedico
 } from "../../controllers/personas/personal_medico.controller";
 
 const router = Router();
 
-// Ruta para obtener todos los personal médico
+// ==========================================
+// RUTAS PARA PERSONAL MÉDICO
+// ==========================================
+
+// GET /api/personas/personal-medico/estadisticas - Obtener estadísticas (debe ir ANTES que /:id)
+router.get("/estadisticas", getEstadisticasPersonalMedico);
+
+// GET /api/personas/personal-medico/activos - Obtener solo personal activo (para selects)
+// Query params: ?especialidad=Pediatría&cargo=Médico&departamento=Urgencias
+router.get("/activos", getPersonalMedicoActivo);
+
+// GET /api/personas/personal-medico - Obtener todo el personal médico
+// Query params: ?activo=true&especialidad=Cardiología&cargo=Jefe&departamento=Medicina&buscar=juan
 router.get("/", getPersonalMedico);
 
-// Ruta para obtener un personal médico por ID
+// GET /api/personas/personal-medico/:id - Obtener personal médico por ID
 router.get("/:id", getPersonalMedicoById);
 
-// Ruta para crear un personal médico
+// POST /api/personas/personal-medico - Crear nuevo personal médico
 router.post("/", createPersonalMedico);
 
-// Ruta para actualizar un personal médico por ID
+// PUT /api/personas/personal-medico/:id - Actualizar personal médico
 router.put("/:id", updatePersonalMedico);
 
-// Ruta para eliminar un personal médico por ID
+// DELETE /api/personas/personal-medico/:id - Eliminar personal médico
 router.delete("/:id", deletePersonalMedico);
 
 export default router;
