@@ -1,42 +1,34 @@
 import express from 'express';
 import cors from 'cors';
-
-// ==========================================
-// IMPORTAR EL CENTRALIZADOR DE RUTAS
-// ==========================================
-import apiRoutes from './routes/index';
+import { ResponseHelper } from './utils/responses';
 
 const app = express();
 
 // ========== CONFIGURACIÓN CORS - DEBE IR ANTES DE TODO ==========
 app.use(cors({
-  origin: 'http://localhost:4200', // Puerto de Angular
+  origin: [
+    'http://localhost:4200', // Angular development
+    'http://127.0.0.1:4200', // Angular alternative
+    // Agregar aquí otros dominios permitidos en producción
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// app.use(express.json());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Configuración de parseo de JSON y URL encoded
+app.use(express.json({ 
+  limit: '10mb',
+  type: ['application/json', 'text/plain']
+}));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '10mb' 
+}));
 
-app.get('/', (req, res) => {
-  return ResponseHelper.success(res, 'Bienvenido a la API del Hospital General San Luis de la Paz', {
-    hospital: 'Hospital General San Luis de la Paz',
-    sistema: 'SICEG-HG - Sistema Integral de Control de Expedientes',
-    version: '1.0.0',
-    ubicacion: 'San Luis de la Paz, Guanajuato, México',
-    documentacion: {
-      health_check: '/api/health',
-      info_sistema: '/api/sistema/info',
-      catalogos: '/api/catalogos/*',
-      expedientes: '/api/gestion-expedientes/*'
-    },
-    desarrollado_por: 'Equipo de Desarrollo Hospital General',
-    fecha_actualizacion: new Date().toISOString()
-  });
-});
-
+// ==========================================
+// IMPORTACIÓN DE RUTAS
+// ==========================================
 
 // ===== Catálogos =====
 import servicioRoutes from './routes/catalogos/servicio.routes';
@@ -79,36 +71,79 @@ import registroTransfusionRoutes from './routes/documentos_clinicos/registro_tra
 // ===== Notas Especializadas =====
 import notaPsicologiaRoutes from './routes/notas_especializadas/nota_psicologia.routes';
 import notaNutricionRoutes from './routes/notas_especializadas/nota_nutricion.routes';
-import { ResponseHelper } from './utils/responses';
 
 // ==========================================
-// CONECTAR TODAS LAS RUTAS DE LA API
+// RUTA PRINCIPAL DE INFORMACIÓN DEL SISTEMA
 // ==========================================
-// app.use('/api', apiRoutes);
-
-// ==========================================
-// MIDDLEWARE PARA MANEJO DE ERRORES GLOBALES
-// ==========================================
-app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error global capturado:', error);
-  
-  return ResponseHelper.error(
-    res,
-    'Error interno del servidor',
-    500,
-    process.env.NODE_ENV === 'development' ? error.message : undefined
-  );
+app.get('/', (req, res) => {
+  return ResponseHelper.success(res, 'Bienvenido a la API del Hospital General San Luis de la Paz', {
+    hospital: 'Hospital General San Luis de la Paz',
+    sistema: 'CICEG-HG - Sistema Integral de Control y Expedientes de Gestión Hospitalaria',
+    version: '1.0.0',
+    ubicacion: 'San Luis de la Paz, Guanajuato, México',
+    estado: 'Activo',
+    timestamp: new Date().toISOString(),
+    documentacion: {
+      health_check: '/api/health',
+      info_sistema: '/api/sistema/info',
+      endpoints: {
+        catalogos: '/api/catalogos/*',
+        personas: '/api/personas/*',
+        expedientes: '/api/gestion-expedientes/*',
+        documentos_clinicos: '/api/documentos-clinicos/*',
+        notas_especializadas: '/api/notas-especializadas/*'
+      }
+    },
+    contacto: {
+      desarrollo: 'Equipo de Desarrollo Hospital General',
+      email: 'desarrollo@hgslp.gob.mx',
+      soporte: 'soporte.sistemas@hgslp.gob.mx'
+    }
+  });
 });
 
 // ==========================================
-// MIDDLEWARE PARA RUTAS NO ENCONTRADAS (404)
+// HEALTH CHECK ENDPOINT
 // ==========================================
-// app.use('*', (req, res) => {
-//   return ResponseHelper.notFound(res, `Ruta ${req.originalUrl} no encontrada`);
-// });
+app.get('/api/health', (req, res) => {
+  return ResponseHelper.success(res, 'API funcionando correctamente', {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
+  });
+});
 
-// ========== MIDDLEWARES =========
-// Catálogos
+// ==========================================
+// INFORMACIÓN DEL SISTEMA
+// ==========================================
+app.get('/api/sistema/info', (req, res) => {
+  return ResponseHelper.success(res, 'Información del sistema CICEG-HG', {
+    nombre: 'CICEG-HG',
+    descripcion: 'Sistema Integral de Control y Expedientes de Gestión Hospitalaria',
+    hospital: 'Hospital General San Luis de la Paz',
+    version: '1.0.0',
+    modulos: {
+      catalogos: 'Gestión de catálogos del sistema',
+      personas: 'Gestión de pacientes, personal médico y administrativo',
+      expedientes: 'Control de expedientes clínicos',
+      documentos_clinicos: 'Gestión de documentos médicos',
+      notas_especializadas: 'Notas de psicología y nutrición'
+    },
+    estadisticas: {
+      endpoints_disponibles: 50, // Actualizar según el número real de endpoints
+      modulos_activos: 5,
+      ultima_actualizacion: new Date().toISOString()
+    }
+  });
+});
+
+// ==========================================
+// CONFIGURACIÓN DE RUTAS DE LA API
+// ==========================================
+
+// ===== CATÁLOGOS =====
 app.use('/api/catalogos/servicios', servicioRoutes);
 app.use('/api/catalogos/areas-interconsulta', areaInterconsultaRoutes);
 app.use('/api/catalogos/guias-clinicas', guiaClinicaRoutes);
@@ -117,13 +152,19 @@ app.use('/api/catalogos/medicamentos', medicamentoRoutes);
 app.use('/api/catalogos/tipos-sangre', tipoSangreRoutes);
 app.use('/api/catalogos/tipos-documento', tipoDocumentoRoutes);
 
-// Gestión de Expedientes
+// ===== PERSONAS (ORDEN IMPORTANTE: específicas antes que generales) =====
+app.use('/api/personas/pacientes', pacienteRoutes);
+app.use('/api/personas/personal-medico', personalMedicoRoutes);
+app.use('/api/personas/administradores', administradorRoutes);
+app.use('/api/personas', personaRoutes); // Esta debe ir AL FINAL
+
+// ===== GESTIÓN DE EXPEDIENTES =====
 app.use('/api/gestion-expedientes/expedientes', expedienteRoutes);
 app.use('/api/gestion-expedientes/camas', camaRoutes);
 app.use('/api/gestion-expedientes/internamientos', internamientoRoutes);
 app.use('/api/gestion-expedientes/signos-vitales', signosVitalesRoutes);
 
-// Documentos Clínicos
+// ===== DOCUMENTOS CLÍNICOS =====
 app.use('/api/documentos-clinicos/documentos', documentoClinicoRoutes);
 app.use('/api/documentos-clinicos/historias-clinicas', historiaClinicaRoutes);
 app.use('/api/documentos-clinicos/notas-urgencias', notaUrgenciasRoutes);
@@ -140,14 +181,51 @@ app.use('/api/documentos-clinicos/referencias-traslado', referenciaTrasladoRoute
 app.use('/api/documentos-clinicos/prescripciones-medicamento', prescripcionMedicamentoRoutes);
 app.use('/api/documentos-clinicos/registros-transfusion', registroTransfusionRoutes);
 
-// Notas Especializadas
+// ===== NOTAS ESPECIALIZADAS =====
 app.use('/api/notas-especializadas/notas-psicologia', notaPsicologiaRoutes);
 app.use('/api/notas-especializadas/notas-nutricion', notaNutricionRoutes);
 
-// Personas - ORDEN IMPORTANTE: rutas específicas ANTES que las generales
-app.use('/api/personas/pacientes', pacienteRoutes);
-app.use('/api/personas/personal-medico', personalMedicoRoutes);
-app.use('/api/personas/administradores', administradorRoutes);
-app.use('/api/personas', personaRoutes); // Esta debe ir AL FINAL
+// ==========================================
+// MIDDLEWARE PARA LOGGING DE REQUESTS (DESARROLLO)
+// ==========================================
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
+    next();
+  });
+}
+
+// ==========================================
+// MIDDLEWARE PARA MANEJO DE ERRORES GLOBALES
+// ==========================================
+app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('❌ Error global capturado:', error);
+  
+  // Log adicional para debugging
+  console.error('📍 Ruta:', req.method, req.originalUrl);
+  console.error('📄 Body:', req.body);
+  console.error('🔍 Stack:', error.stack);
+  
+  return ResponseHelper.error(
+    res,
+    'Error interno del servidor',
+    500,
+    process.env.NODE_ENV === 'development' ? {
+      message: error.message,
+      stack: error.stack,
+      url: req.originalUrl,
+      method: req.method
+    } : undefined
+  );
+});
+
+// ==========================================
+// MIDDLEWARE PARA RUTAS NO ENCONTRADAS (404)
+// ==========================================
+app.use('*', (req, res) => {
+  console.log(`⚠️ Ruta no encontrada: ${req.method} ${req.originalUrl}`);
+  return ResponseHelper.notFound(res, `Ruta ${req.originalUrl} no encontrada`);
+});
 
 export default app;
