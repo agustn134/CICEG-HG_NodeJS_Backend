@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import { ResponseHelper } from './utils/responses';
@@ -79,7 +80,7 @@ app.get('/', (req, res) => {
   return ResponseHelper.success(res, 'Bienvenido a la API del Hospital General San Luis de la Paz', {
     hospital: 'Hospital General San Luis de la Paz',
     sistema: 'CICEG-HG - Sistema Integral de Control y Expedientes de Gestión Hospitalaria',
-    version: '1.0.0',
+    version: '1.3.4',
     ubicacion: 'San Luis de la Paz, Guanajuato, México',
     estado: 'Activo',
     timestamp: new Date().toISOString(),
@@ -95,9 +96,9 @@ app.get('/', (req, res) => {
       }
     },
     contacto: {
-      desarrollo: 'Equipo de Desarrollo Hospital General',
-      email: 'desarrollo@hgslp.gob.mx',
-      soporte: 'soporte.sistemas@hgslp.gob.mx'
+      desarrollo: 'Agustin de Practicas Y Estadias 2025',
+      email: 'agustinlopezparra13@gmail.gob.mx',
+      soporte: 'agustinlopezparra13@gmail.gob.mx'
     }
   });
 });
@@ -111,7 +112,7 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0'
+    version: '8.4.3'
   });
 });
 
@@ -123,7 +124,7 @@ app.get('/api/sistema/info', (req, res) => {
     nombre: 'CICEG-HG',
     descripcion: 'Sistema Integral de Control y Expedientes de Gestión Hospitalaria',
     hospital: 'Hospital General San Luis de la Paz',
-    version: '1.0.0',
+    version: '1.3.4',
     modulos: {
       catalogos: 'Gestión de catálogos del sistema',
       personas: 'Gestión de pacientes, personal médico y administrativo',
@@ -132,12 +133,69 @@ app.get('/api/sistema/info', (req, res) => {
       notas_especializadas: 'Notas de psicología y nutrición'
     },
     estadisticas: {
-      endpoints_disponibles: 50, // Actualizar según el número real de endpoints
+      endpoints_disponibles: 50, 
       modulos_activos: 5,
       ultima_actualizacion: new Date().toISOString()
-    }
+    },
+    legado: {
+  casas: {
+    nacimiento: 843,
+    infancia: 134
+  },
+  autor: 'agus_tparra'}
   });
 });
+
+
+app.get('/api/134', (req, res) => {
+  return ResponseHelper.success(res, ' Firma del desarrollador', {
+    ascii_art: `
+    
+    ░█████╗░░██████╗░██╗░░░██╗░██████╗  ████████╗██████╗░░█████╗░██████╗░██████╗░░█████╗░
+    ██╔══██╗██╔════╝░██║░░░██║██╔════╝  ╚══██╔══╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗
+    ███████║██║░░██╗░██║░░░██║╚█████╗░  ░░░██║░░░██████╔╝███████║██████╔╝██████╔╝███████║
+    ██╔══██║██║░░╚██╗██║░░░██║░╚═══██╗  ░░░██║░░░██╔═══╝░██╔══██║██╔══██╗██╔══██╗██╔══██║
+    ██║░░██║╚██████╔╝╚██████╔╝██████╔╝  ░░░██║░░░██║░░░░░██║░░██║██║░░██║██║░░██║██║░░██║
+    ╚═╝░░╚═╝░╚═════╝░░╚═════╝░╚═════╝░  ░░░╚═╝░░░╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝
+    `,
+    desarrollador: {
+      tag: 'agus_tparra',
+      aka: ['8-4-3 Crew'],
+      ubicacion: {
+        origen: 'Casa 843 - Donde nacieron los sueños',
+        crecimiento: 'Barrio 134 - Donde se forjó el carácter',
+        destino: 'El futuro que estoy construyendo línea por línea'
+      }
+    },
+    stats: {
+      proyectos_terminados: 'Los que han cambiado vidas',
+      bugs_resueltos: 'Infinitos y contando',
+      cafe_consumido: 'Litros que alimentan el algoritmo',
+      beats_producidos: 'Cada commit suena diferente',
+    },
+    crew: {
+      '843': 'Donde aprendí que los sueños no se piden, se construyen',
+      '134': 'Donde entendí que el código puede cambiar todo',
+      'sin_miedo': 'Al futuro, al cambio, al éxito'
+    },
+    mensaje_personal: {
+      para_quien_lea_esto: 'Este endpoint no es solo código, es mi historia.',
+      dedicatoria: 'Para los que vienen del barrio y sueñan con el cielo.'
+    },
+    easter_eggs: {
+      hidden_message: 'Si llegaste hasta aquí, respetas el hustle',
+    },
+    timestamps: {
+      nacimiento: '2004-09-05T01:03:04.000Z',
+      proyecto_ciceg: new Date().toISOString(),
+    },
+    contacto: {
+      music: 'soul',
+      ubicacion: 'Entre el 843 y el 134, construyendo puente'
+    },
+  });
+});
+
 
 // ==========================================
 // CONFIGURACIÓN DE RUTAS DE LA API
@@ -200,12 +258,12 @@ if (process.env.NODE_ENV === 'development') {
 // MIDDLEWARE PARA MANEJO DE ERRORES GLOBALES
 // ==========================================
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('❌ Error global capturado:', error);
+  console.error(' Error global capturado:', error);
   
   // Log adicional para debugging
-  console.error('📍 Ruta:', req.method, req.originalUrl);
-  console.error('📄 Body:', req.body);
-  console.error('🔍 Stack:', error.stack);
+  console.error('Ruta:', req.method, req.originalUrl);
+  console.error('Body:', req.body);
+  console.error('Stack:', error.stack);
   
   return ResponseHelper.error(
     res,
@@ -220,12 +278,5 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
   );
 });
 
-// ==========================================
-// MIDDLEWARE PARA RUTAS NO ENCONTRADAS (404)
-// ==========================================
-app.use('*', (req, res) => {
-  console.log(`⚠️ Ruta no encontrada: ${req.method} ${req.originalUrl}`);
-  return ResponseHelper.notFound(res, `Ruta ${req.originalUrl} no encontrada`);
-});
 
 export default app;
