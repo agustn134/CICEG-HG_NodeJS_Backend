@@ -533,8 +533,6 @@ export const getResumenEvolucionClinica = async (req: Request, res: Response): P
 };
 
 
-
-
 // ==========================================
 // OBTENER NOTA DE EVOLUCIÓN POR ID
 // ==========================================
