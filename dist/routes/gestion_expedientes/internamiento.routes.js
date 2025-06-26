@@ -8,5 +8,5 @@ router.get("/", internamiento_controller_1.getInternamientos);
 router.get("/:id", internamiento_controller_1.getInternamientoById);
 router.post("/", internamiento_controller_1.createInternamiento);
 router.put("/:id", internamiento_controller_1.updateInternamiento);
-router.delete("/:id", internamiento_controller_1.deleteInternamiento);
+// router.delete("/:id", deleteInternamiento);
 exports.default = router;
