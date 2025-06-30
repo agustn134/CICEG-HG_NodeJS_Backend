@@ -5,33 +5,34 @@ const express_1 = require("express");
 const signos_vitales_controller_1 = require("../../controllers/gestion_expedientes/signos_vitales.controller");
 const router = (0, express_1.Router)();
 // ==========================================
+// RUTAS ESPECIALIZADAS (DEBEN IR ANTES QUE /:id)
+// ==========================================
+// GET /api/gestion-expedientes/signos-vitales/expediente/:id_expediente/ultimos
+// Obtener últimos signos vitales de un expediente
+router.get("/expediente/:id_expediente/ultimos", signos_vitales_controller_1.getUltimosSignosVitalesPaciente);
+// GET /api/gestion-expedientes/signos-vitales/expediente/:id_expediente/historial
+// Obtener historial completo de signos vitales de un expediente
+router.get("/expediente/:id_expediente/historial", signos_vitales_controller_1.getHistorialSignosVitales);
+// GET /api/gestion-expedientes/signos-vitales/expediente/:id_expediente/grafica
+// Obtener datos para gráfica de signos vitales
+router.get("/expediente/:id_expediente/grafica", signos_vitales_controller_1.getGraficaSignosVitales);
+// ==========================================
 // RUTAS BÁSICAS CRUD
 // ==========================================
+// GET /api/gestion-expedientes/signos-vitales
 // Obtener todos los signos vitales con filtros y paginación
-// GET /api/signos-vitales?id_expediente=1&fecha_inicio=2024-01-01&limit=50&offset=0
+// Query params: id_expediente, id_internamiento, fecha_inicio, fecha_fin, incluir_anormales, limit, offset
 router.get("/", signos_vitales_controller_1.getSignosVitales);
+// GET /api/gestion-expedientes/signos-vitales/:id
 // Obtener signos vitales por ID específico
-// GET /api/signos-vitales/123
 router.get("/:id", signos_vitales_controller_1.getSignosVitalesById);
+// POST /api/gestion-expedientes/signos-vitales
 // Crear nuevos signos vitales
-// POST /api/signos-vitales
 router.post("/", signos_vitales_controller_1.createSignosVitales);
+// PUT /api/gestion-expedientes/signos-vitales/:id
 // Actualizar signos vitales existentes
-// PUT /api/signos-vitales/123
 router.put("/:id", signos_vitales_controller_1.updateSignosVitales);
+// DELETE /api/gestion-expedientes/signos-vitales/:id
 // Eliminar (anular) signos vitales
-// DELETE /api/signos-vitales/123
 router.delete("/:id", signos_vitales_controller_1.deleteSignosVitales);
-// ==========================================
-// RUTAS ESPECIALIZADAS
-// ==========================================
-// Obtener últimos signos vitales de un expediente
-// GET /api/signos-vitales/expediente/123/ultimos?limite=1
-router.get("/expediente/:id_expediente/ultimos", signos_vitales_controller_1.getUltimosSignosVitalesPaciente);
-// Obtener historial completo de signos vitales de un expediente
-// GET /api/signos-vitales/expediente/123/historial?fecha_inicio=2024-01-01&tipo_signo=temperatura
-router.get("/expediente/:id_expediente/historial", signos_vitales_controller_1.getHistorialSignosVitales);
-// Obtener datos para gráfica de signos vitales
-// GET /api/signos-vitales/expediente/123/grafica?tipo_signo=todos&dias=7
-router.get("/expediente/:id_expediente/grafica", signos_vitales_controller_1.getGraficaSignosVitales);
 exports.default = router;
