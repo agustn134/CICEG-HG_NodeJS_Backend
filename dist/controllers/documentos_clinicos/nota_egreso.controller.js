@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validarNotaEgreso = exports.estadisticasNotasEgreso = exports.getNotasEgresoWithDetails = exports.searchNotasEgreso = exports.getNotasEgresoByPaciente = exports.getNotasEgresoByExpediente = exports.deleteNotaEgreso = exports.updateNotaEgreso = exports.createNotaEgreso = exports.getNotaEgresoById = exports.getNotasEgreso = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 // ==========================================
-// FUNCIONES CRUD BÁSICAS
+// FUNCIONES CRUD BÁSICAS - CORREGIDAS
 // ==========================================
 const getNotasEgreso = async (req, res) => {
     try {
@@ -14,16 +14,16 @@ const getNotasEgreso = async (req, res) => {
         let query = `
       SELECT 
         ne.*,
-        dc.fecha_documento,
+        dc.fecha_elaboracion as fecha_documento,
         p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as nombre_paciente,
         pm.nombre || ' ' || pm.apellido_paterno as nombre_medico,
-        gc.nombre_guia_diagnostico
+        gc.nombre as nombre_guia_diagnostico
       FROM nota_egreso ne
       JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
       JOIN expediente e ON dc.id_expediente = e.id_expediente
       JOIN paciente pac ON e.id_paciente = pac.id_paciente
       JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN personal_medico pm_rel ON dc.id_medico = pm_rel.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
       WHERE 1=1
@@ -38,15 +38,15 @@ const getNotasEgreso = async (req, res) => {
         }
         if (fecha_inicio) {
             paramCount++;
-            query += ` AND dc.fecha_documento >= $${paramCount}`;
+            query += ` AND dc.fecha_elaboracion >= $${paramCount}`;
             params.push(fecha_inicio);
         }
         if (fecha_fin) {
             paramCount++;
-            query += ` AND dc.fecha_documento <= $${paramCount}`;
+            query += ` AND dc.fecha_elaboracion <= $${paramCount}`;
             params.push(fecha_fin);
         }
-        query += ` ORDER BY dc.fecha_documento DESC`;
+        query += ` ORDER BY dc.fecha_elaboracion DESC`;
         // Paginación
         const offset = (Number(page) - 1) * Number(limit);
         paramCount++;
@@ -56,17 +56,31 @@ const getNotasEgreso = async (req, res) => {
         query += ` OFFSET $${paramCount}`;
         params.push(offset);
         const response = await database_1.default.query(query, params);
-        // Contar total de registros
-        const countQuery = `
+        // Contar total de registros para paginación
+        let countQuery = `
       SELECT COUNT(*) as total
       FROM nota_egreso ne
       JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
       WHERE 1=1
-      ${motivo_egreso ? `AND ne.motivo_egreso ILIKE '%${motivo_egreso}%'` : ''}
-      ${fecha_inicio ? `AND dc.fecha_documento >= '${fecha_inicio}'` : ''}
-      ${fecha_fin ? `AND dc.fecha_documento <= '${fecha_fin}'` : ''}
     `;
-        const countResult = await database_1.default.query(countQuery);
+        const countParams = [];
+        let countParamCount = 0;
+        if (motivo_egreso) {
+            countParamCount++;
+            countQuery += ` AND ne.motivo_egreso ILIKE $${countParamCount}`;
+            countParams.push(`%${motivo_egreso}%`);
+        }
+        if (fecha_inicio) {
+            countParamCount++;
+            countQuery += ` AND dc.fecha_elaboracion >= $${countParamCount}`;
+            countParams.push(fecha_inicio);
+        }
+        if (fecha_fin) {
+            countParamCount++;
+            countQuery += ` AND dc.fecha_elaboracion <= $${countParamCount}`;
+            countParams.push(fecha_fin);
+        }
+        const countResult = await database_1.default.query(countQuery, countParams);
         const total = parseInt(countResult.rows[0].total);
         return res.status(200).json({
             success: true,
@@ -95,14 +109,14 @@ const getNotaEgresoById = async (req, res) => {
         const query = `
       SELECT 
         ne.*,
-        dc.fecha_documento,
+        dc.fecha_elaboracion as fecha_documento,
         dc.observaciones as observaciones_documento,
         p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as nombre_paciente,
         p.fecha_nacimiento,
         p.sexo,
         pm.nombre || ' ' || pm.apellido_paterno as nombre_medico,
         pm_rel.numero_cedula,
-        gc.nombre_guia_diagnostico,
+        gc.nombre as nombre_guia_diagnostico,
         e.numero_expediente,
         s.nombre_servicio
       FROM nota_egreso ne
@@ -110,7 +124,7 @@ const getNotaEgresoById = async (req, res) => {
       JOIN expediente e ON dc.id_expediente = e.id_expediente
       JOIN paciente pac ON e.id_paciente = pac.id_paciente
       JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN personal_medico pm_rel ON dc.id_medico = pm_rel.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
       LEFT JOIN servicio s ON dc.id_servicio = s.id_servicio
@@ -152,6 +166,15 @@ const createNotaEgreso = async (req, res) => {
                 message: "El documento clínico especificado no existe"
             });
         }
+        // Validar que no exista ya una nota de egreso para este documento
+        const existingNoteQuery = await client.query('SELECT id_nota_egreso FROM nota_egreso WHERE id_documento = $1', [id_documento]);
+        if (existingNoteQuery.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                message: "Ya existe una nota de egreso para este documento clínico"
+            });
+        }
         // Insertar nota de egreso
         const insertQuery = `
       INSERT INTO nota_egreso (
@@ -164,10 +187,20 @@ const createNotaEgreso = async (req, res) => {
       RETURNING *
     `;
         const response = await client.query(insertQuery, [
-            id_documento, diagnostico_ingreso, resumen_evolucion, manejo_hospitalario,
-            diagnostico_egreso, id_guia_diagnostico, procedimientos_realizados,
-            fecha_procedimientos, motivo_egreso, problemas_pendientes, plan_tratamiento,
-            recomendaciones_vigilancia, atencion_factores_riesgo, pronostico,
+            id_documento,
+            diagnostico_ingreso || null,
+            resumen_evolucion || null,
+            manejo_hospitalario || null,
+            diagnostico_egreso || null,
+            id_guia_diagnostico || null,
+            procedimientos_realizados || null,
+            fecha_procedimientos || null,
+            motivo_egreso || null,
+            problemas_pendientes || null,
+            plan_tratamiento || null,
+            recomendaciones_vigilancia || null,
+            atencion_factores_riesgo || null,
+            pronostico || null,
             reingreso_por_misma_afeccion
         ]);
         await client.query('COMMIT');
@@ -272,7 +305,7 @@ const deleteNotaEgreso = async (req, res) => {
 };
 exports.deleteNotaEgreso = deleteNotaEgreso;
 // ==========================================
-// FUNCIONES ESPECÍFICAS Y CONSULTAS AVANZADAS
+// FUNCIONES ESPECÍFICAS Y CONSULTAS AVANZADAS - CORREGIDAS
 // ==========================================
 const getNotasEgresoByExpediente = async (req, res) => {
     try {
@@ -280,14 +313,14 @@ const getNotasEgresoByExpediente = async (req, res) => {
         const query = `
       SELECT 
         ne.*,
-        dc.fecha_documento,
+        dc.fecha_elaboracion as fecha_documento,
         pm.nombre || ' ' || pm.apellido_paterno as nombre_medico
       FROM nota_egreso ne
       JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
-      LEFT JOIN personal_medico pm_rel ON dc.id_medico = pm_rel.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       WHERE dc.id_expediente = $1
-      ORDER BY dc.fecha_documento DESC
+      ORDER BY dc.fecha_elaboracion DESC
     `;
         const response = await database_1.default.query(query, [id_expediente]);
         return res.status(200).json({
@@ -311,16 +344,16 @@ const getNotasEgresoByPaciente = async (req, res) => {
         const query = `
       SELECT 
         ne.*,
-        dc.fecha_documento,
+        dc.fecha_elaboracion as fecha_documento,
         e.numero_expediente,
         pm.nombre || ' ' || pm.apellido_paterno as nombre_medico
       FROM nota_egreso ne
       JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
       JOIN expediente e ON dc.id_expediente = e.id_expediente
-      LEFT JOIN personal_medico pm_rel ON dc.id_medico = pm_rel.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       WHERE e.id_paciente = $1
-      ORDER BY dc.fecha_documento DESC
+      ORDER BY dc.fecha_elaboracion DESC
     `;
         const response = await database_1.default.query(query, [id_paciente]);
         return res.status(200).json({
@@ -344,7 +377,7 @@ const searchNotasEgreso = async (req, res) => {
         const query = `
       SELECT 
         ne.*,
-        dc.fecha_documento,
+        dc.fecha_elaboracion,
         p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as nombre_paciente,
         e.numero_expediente
       FROM nota_egreso ne
@@ -359,7 +392,7 @@ const searchNotasEgreso = async (req, res) => {
         p.nombre ILIKE $1 OR
         p.apellido_paterno ILIKE $1 OR
         e.numero_expediente ILIKE $1
-      ORDER BY dc.fecha_documento DESC
+      ORDER BY dc.fecha_elaboracion DESC
       LIMIT 20
     `;
         const response = await database_1.default.query(query, [`%${searchQuery}%`]);
@@ -384,13 +417,13 @@ const getNotasEgresoWithDetails = async (req, res) => {
         const query = `
       SELECT 
         ne.*,
-        dc.fecha_documento,
+        dc.fecha_elaboracion,
         dc.observaciones as observaciones_documento,
         p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as nombre_paciente,
         p.fecha_nacimiento,
         p.sexo,
         pm.nombre || ' ' || pm.apellido_paterno as nombre_medico,
-        gc.nombre_guia_diagnostico,
+        gc.nombre as nombre_guia_diagnostico,
         e.numero_expediente,
         s.nombre_servicio,
         EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad_anos
@@ -399,11 +432,11 @@ const getNotasEgresoWithDetails = async (req, res) => {
       JOIN expediente e ON dc.id_expediente = e.id_expediente
       JOIN paciente pac ON e.id_paciente = pac.id_paciente
       JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN personal_medico pm_rel ON dc.id_medico = pm_rel.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
       LEFT JOIN servicio s ON dc.id_servicio = s.id_servicio
-      ORDER BY dc.fecha_documento DESC
+      ORDER BY dc.fecha_elaboracion DESC
       LIMIT $1
     `;
         const response = await database_1.default.query(query, [limit]);
@@ -438,12 +471,12 @@ const estadisticasNotasEgreso = async (req, res) => {
         // Estadísticas por mes
         const porMesQuery = `
       SELECT 
-        DATE_TRUNC('month', dc.fecha_documento) as mes,
+        DATE_TRUNC('month', dc.fecha_elaboracion) as mes,
         COUNT(*) as cantidad_egresos
       FROM nota_egreso ne
       JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
-      WHERE dc.fecha_documento >= CURRENT_DATE - INTERVAL '6 months'
-      GROUP BY DATE_TRUNC('month', dc.fecha_documento)
+      WHERE dc.fecha_elaboracion >= CURRENT_DATE - INTERVAL '6 months'
+      GROUP BY DATE_TRUNC('month', dc.fecha_elaboracion)
       ORDER BY mes DESC
     `;
         // Reingresos

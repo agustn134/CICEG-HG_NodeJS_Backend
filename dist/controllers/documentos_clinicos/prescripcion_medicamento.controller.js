@@ -6,50 +6,53 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getEstadisticasPrescripciones = exports.getPrescripcionesByExpediente = exports.deletePrescripcionMedicamento = exports.updatePrescripcionMedicamento = exports.createPrescripcionMedicamento = exports.getPrescripcionMedicamentoById = exports.getPrescripcionesMedicamento = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 // ==========================================
-// OBTENER TODAS LAS PRESCRIPCIONES CON FILTROS
+// OBTENER TODAS LAS PRESCRIPCIONES DE MEDICAMENTO
 // ==========================================
 const getPrescripcionesMedicamento = async (req, res) => {
     try {
-        const { page = 1, limit = 10, id_documento, id_expediente, id_medicamento, activo, fecha_inicio, fecha_fin, buscar, grupo_terapeutico } = req.query;
-        // Validar parámetros de paginación
+        const { page = 1, limit = 10, id_documento, id_expediente, id_medicamento, activo, grupo_terapeutico, fecha_inicio, fecha_fin, buscar } = req.query;
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 10;
         const offset = (pageNum - 1) * limitNum;
-        // Query base con JOINs para información completa
+        // Query base con JOINs corregidos
         let baseQuery = `
       SELECT 
-        pm.*,
-        dc.id_expediente,
+        pm.id_prescripcion,
+        pm.id_documento,
+        pm.id_medicamento,
+        pm.dosis,
+        pm.via_administracion,
+        pm.frecuencia,
+        pm.duracion,
+        pm.indicaciones_especiales,
+        pm.fecha_inicio,
+        pm.fecha_fin,
+        pm.activo,
+        -- Información del medicamento
+        m.codigo as codigo_medicamento,
+        m.nombre as nombre_medicamento,
+        m.presentacion as presentacion_medicamento,
+        m.concentracion as concentracion_medicamento,
+        m.grupo_terapeutico,
+        -- Información del documento
         dc.fecha_elaboracion as fecha_documento,
         dc.estado as estado_documento,
+        -- Información del expediente
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
-        p.fecha_nacimiento,
-        p.sexo,
-        m.codigo as medicamento_codigo,
-        m.nombre as medicamento_nombre,
-        m.presentacion,
-        m.concentracion,
-        m.grupo_terapeutico,
-        personal.nombres || ' ' || personal.apellido_paterno as medico_prescriptor,
-        personal.especialidad,
-        personal.cedula_profesional,
-        -- Calcular si la prescripción está vigente
-        CASE 
-          WHEN pm.fecha_fin IS NULL THEN 
-            CASE WHEN pm.fecha_inicio + INTERVAL '1 day' * CAST(REGEXP_REPLACE(pm.duracion, '[^0-9]', '', 'g') AS INTEGER) >= CURRENT_DATE 
-                 THEN TRUE ELSE FALSE END
-          WHEN pm.fecha_fin >= CURRENT_DATE THEN TRUE 
-          ELSE FALSE 
-        END as vigente
+        -- Información del paciente
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as nombre_paciente,
+        -- Información del médico
+        pm_persona.nombre || ' ' || pm_persona.apellido_paterno as nombre_medico
       FROM prescripcion_medicamento pm
       INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
       INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
       INNER JOIN persona p ON pac.id_persona = p.id_persona
       INNER JOIN medicamento m ON pm.id_medicamento = m.id_medicamento
-      LEFT JOIN personal_medico personal ON dc.id_personal_creador = personal.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+      LEFT JOIN persona pm_persona ON pm_rel.id_persona = pm_persona.id_persona
     `;
+        // Query para contar registros
         let countQuery = `
       SELECT COUNT(*) as total
       FROM prescripcion_medicamento pm
@@ -93,7 +96,7 @@ const getPrescripcionesMedicamento = async (req, res) => {
         if (buscar) {
             conditions.push(`(
         e.numero_expediente ILIKE $${values.length + 1} OR
-        (p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
+        (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
         m.nombre ILIKE $${values.length + 1} OR
         m.codigo ILIKE $${values.length + 1} OR
         pm.dosis ILIKE $${values.length + 1}
@@ -156,45 +159,43 @@ const getPrescripcionMedicamentoById = async (req, res) => {
         }
         const query = `
       SELECT 
-        pm.*,
-        dc.id_expediente,
+        pm.id_prescripcion,
+        pm.id_documento,
+        pm.id_medicamento,
+        pm.dosis,
+        pm.via_administracion,
+        pm.frecuencia,
+        pm.duracion,
+        pm.indicaciones_especiales,
+        pm.fecha_inicio,
+        pm.fecha_fin,
+        pm.activo,
+        -- Información del medicamento
+        m.codigo as codigo_medicamento,
+        m.nombre as nombre_medicamento,
+        m.presentacion as presentacion_medicamento,
+        m.concentracion as concentracion_medicamento,
+        m.grupo_terapeutico,
+        -- Información del documento
         dc.fecha_elaboracion as fecha_documento,
         dc.estado as estado_documento,
-        dc.id_personal_creador,
+        -- Información del expediente
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        -- Información del paciente
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as nombre_paciente,
         p.fecha_nacimiento,
         p.sexo,
-        p.curp,
-        m.codigo as medicamento_codigo,
-        m.nombre as medicamento_nombre,
-        m.presentacion,
-        m.concentracion,
-        m.grupo_terapeutico,
-        personal.nombres || ' ' || personal.apellido_paterno as medico_prescriptor,
-        personal.especialidad,
-        personal.cedula_profesional,
-        -- Calcular si la prescripción está vigente
-        CASE 
-          WHEN pm.fecha_fin IS NULL THEN 
-            CASE WHEN pm.fecha_inicio + INTERVAL '1 day' * CAST(REGEXP_REPLACE(pm.duracion, '[^0-9]', '', 'g') AS INTEGER) >= CURRENT_DATE 
-                 THEN TRUE ELSE FALSE END
-          WHEN pm.fecha_fin >= CURRENT_DATE THEN TRUE 
-          ELSE FALSE 
-        END as vigente,
-        -- Calcular días restantes
-        CASE 
-          WHEN pm.fecha_fin IS NULL THEN 
-            GREATEST(0, CAST(REGEXP_REPLACE(pm.duracion, '[^0-9]', '', 'g') AS INTEGER) - (CURRENT_DATE - pm.fecha_inicio))
-          ELSE GREATEST(0, pm.fecha_fin - CURRENT_DATE)
-        END as dias_restantes
+        -- Información del médico
+        pm_persona.nombre || ' ' || pm_persona.apellido_paterno as nombre_medico,
+        pm_rel.numero_cedula
       FROM prescripcion_medicamento pm
       INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
       INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
       INNER JOIN persona p ON pac.id_persona = p.id_persona
       INNER JOIN medicamento m ON pm.id_medicamento = m.id_medicamento
-      LEFT JOIN personal_medico personal ON dc.id_personal_creador = personal.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+      LEFT JOIN persona pm_persona ON pm_rel.id_persona = pm_persona.id_persona
       WHERE pm.id_prescripcion = $1
     `;
         const response = await database_1.default.query(query, [id]);
@@ -221,82 +222,50 @@ const getPrescripcionMedicamentoById = async (req, res) => {
 };
 exports.getPrescripcionMedicamentoById = getPrescripcionMedicamentoById;
 // ==========================================
-// CREAR NUEVA PRESCRIPCIÓN DE MEDICAMENTO
+// CREAR PRESCRIPCIÓN DE MEDICAMENTO
 // ==========================================
 const createPrescripcionMedicamento = async (req, res) => {
     try {
         const { id_documento, id_medicamento, dosis, via_administracion, frecuencia, duracion, indicaciones_especiales, fecha_inicio, fecha_fin, activo = true } = req.body;
-        // Validaciones obligatorias
+        // Validaciones básicas
         if (!id_documento || !id_medicamento || !dosis || !via_administracion || !frecuencia || !fecha_inicio) {
             return res.status(400).json({
                 success: false,
                 message: 'Los campos id_documento, id_medicamento, dosis, via_administracion, frecuencia y fecha_inicio son obligatorios'
             });
         }
-        // Verificar que el documento clínico existe y no está anulado
-        const documentoCheck = await database_1.default.query('SELECT id_documento, estado FROM documento_clinico WHERE id_documento = $1', [id_documento]);
+        // Validar que el documento clínico existe
+        const documentoCheck = await database_1.default.query('SELECT id_documento FROM documento_clinico WHERE id_documento = $1', [id_documento]);
         if (documentoCheck.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'El documento clínico especificado no existe'
             });
         }
-        if (documentoCheck.rows[0].estado === 'Anulado') {
-            return res.status(400).json({
-                success: false,
-                message: 'No se puede crear una prescripción para un documento anulado'
-            });
-        }
-        // Verificar que el medicamento existe y está activo
-        const medicamentoCheck = await database_1.default.query('SELECT id_medicamento, nombre, activo FROM medicamento WHERE id_medicamento = $1', [id_medicamento]);
+        // Validar que el medicamento existe
+        const medicamentoCheck = await database_1.default.query('SELECT id_medicamento, nombre FROM medicamento WHERE id_medicamento = $1 AND activo = true', [id_medicamento]);
         if (medicamentoCheck.rows.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'El medicamento especificado no existe'
+                message: 'El medicamento especificado no existe o no está activo'
             });
         }
-        if (!medicamentoCheck.rows[0].activo) {
-            return res.status(400).json({
-                success: false,
-                message: 'El medicamento especificado no está activo'
-            });
-        }
-        // Validar fechas
-        const fechaInicioDate = new Date(fecha_inicio);
-        if (isNaN(fechaInicioDate.getTime())) {
-            return res.status(400).json({
-                success: false,
-                message: 'La fecha de inicio no es válida'
-            });
-        }
-        if (fecha_fin) {
-            const fechaFinDate = new Date(fecha_fin);
-            if (isNaN(fechaFinDate.getTime()) || fechaFinDate <= fechaInicioDate) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'La fecha de fin debe ser válida y posterior a la fecha de inicio'
-                });
-            }
-        }
-        // Verificar posibles interacciones o duplicados activos del mismo medicamento
+        // Verificar si ya existe una prescripción activa de este medicamento para este documento
         const prescripcionExistente = await database_1.default.query(`
-      SELECT pm.id_prescripcion, m.nombre as medicamento_nombre
+      SELECT 
+        pm.id_prescripcion,
+        m.nombre as medicamento_nombre
       FROM prescripcion_medicamento pm
       INNER JOIN medicamento m ON pm.id_medicamento = m.id_medicamento
-      INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
-      WHERE dc.id_expediente = (
-        SELECT id_expediente FROM documento_clinico WHERE id_documento = $1
-      )
-      AND pm.id_medicamento = $2
-      AND pm.activo = true
-      AND (
-        pm.fecha_fin IS NULL OR pm.fecha_fin >= CURRENT_DATE
-      )
+      WHERE pm.id_documento = $1 
+        AND pm.id_medicamento = $2 
+        AND pm.activo = true
+        AND (pm.fecha_fin IS NULL OR pm.fecha_fin >= CURRENT_DATE)
     `, [id_documento, id_medicamento]);
         if (prescripcionExistente.rows.length > 0) {
             return res.status(409).json({
                 success: false,
-                message: `Ya existe una prescripción activa del medicamento ${prescripcionExistente.rows[0].medicamento_nombre} para este paciente`,
+                message: `Ya existe una prescripción activa del medicamento ${prescripcionExistente.rows[0].medicamento_nombre} para este documento`,
                 data: {
                     prescripcion_existente: prescripcionExistente.rows[0].id_prescripcion
                 }
@@ -363,50 +332,31 @@ const updatePrescripcionMedicamento = async (req, res) => {
         }
         // Validar medicamento si se proporciona
         if (updateData.id_medicamento) {
-            const medicamentoCheck = await database_1.default.query('SELECT id_medicamento, activo FROM medicamento WHERE id_medicamento = $1', [updateData.id_medicamento]);
-            if (medicamentoCheck.rows.length === 0 || !medicamentoCheck.rows[0].activo) {
+            const medicamentoCheck = await database_1.default.query('SELECT id_medicamento FROM medicamento WHERE id_medicamento = $1 AND activo = true', [updateData.id_medicamento]);
+            if (medicamentoCheck.rows.length === 0) {
                 return res.status(404).json({
                     success: false,
                     message: 'El medicamento especificado no existe o no está activo'
                 });
             }
         }
-        // Validar fechas si se proporcionan
-        if (updateData.fecha_inicio && updateData.fecha_fin) {
-            const fechaInicioDate = new Date(updateData.fecha_inicio);
-            const fechaFinDate = new Date(updateData.fecha_fin);
-            if (fechaFinDate <= fechaInicioDate) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'La fecha de fin debe ser posterior a la fecha de inicio'
-                });
-            }
-        }
-        // Construir query dinámico solo con campos proporcionados
-        const fields = Object.keys(updateData);
-        const values = [];
-        const setClause = fields.map((field, index) => {
-            let value = updateData[field];
-            if (typeof value === 'string') {
-                value = value.trim();
-            }
-            values.push(value);
-            return `${field} = $${index + 1}`;
-        }).join(', ');
+        // Construir query dinámico para actualización
+        const fields = Object.keys(updateData).filter(key => updateData[key] !== undefined);
+        const values = fields.map(field => updateData[field]);
         if (fields.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'No se proporcionaron campos para actualizar'
+                message: 'No hay campos para actualizar'
             });
         }
-        values.push(id);
-        const query = `
+        const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ');
+        const updateQuery = `
       UPDATE prescripcion_medicamento 
       SET ${setClause}
-      WHERE id_prescripcion = $${values.length}
+      WHERE id_prescripcion = $1
       RETURNING *
     `;
-        const response = await database_1.default.query(query, values);
+        const response = await database_1.default.query(updateQuery, [id, ...values]);
         return res.status(200).json({
             success: true,
             message: 'Prescripción de medicamento actualizada correctamente',
@@ -435,7 +385,7 @@ const deletePrescripcionMedicamento = async (req, res) => {
                 message: 'El ID debe ser un número válido'
             });
         }
-        // En lugar de eliminar físicamente, desactivar la prescripción
+        // Desactivar prescripción (soft delete)
         const response = await database_1.default.query('UPDATE prescripcion_medicamento SET activo = false WHERE id_prescripcion = $1 RETURNING *', [id]);
         if (response.rows.length === 0) {
             return res.status(404).json({
@@ -472,38 +422,40 @@ const getPrescripcionesByExpediente = async (req, res) => {
                 message: 'El ID del expediente debe ser un número válido'
             });
         }
-        let query = `
+        const query = `
       SELECT 
-        pm.*,
-        m.codigo as medicamento_codigo,
-        m.nombre as medicamento_nombre,
-        m.presentacion,
-        m.concentracion,
+        pm.id_prescripcion,
+        pm.id_documento,
+        pm.id_medicamento,
+        pm.dosis,
+        pm.via_administracion,
+        pm.frecuencia,
+        pm.duracion,
+        pm.indicaciones_especiales,
+        pm.fecha_inicio,
+        pm.fecha_fin,
+        pm.activo,
+        -- Información del medicamento
+        m.codigo as codigo_medicamento,
+        m.nombre as nombre_medicamento,
+        m.presentacion as presentacion_medicamento,
+        m.concentracion as concentracion_medicamento,
         m.grupo_terapeutico,
-        personal.nombres || ' ' || personal.apellido_paterno as medico_prescriptor,
-        personal.especialidad,
+        -- Información del documento
         dc.fecha_elaboracion as fecha_documento,
-        -- Calcular si la prescripción está vigente
-        CASE 
-          WHEN pm.fecha_fin IS NULL THEN 
-            CASE WHEN pm.fecha_inicio + INTERVAL '1 day' * CAST(REGEXP_REPLACE(pm.duracion, '[^0-9]', '', 'g') AS INTEGER) >= CURRENT_DATE 
-                 THEN TRUE ELSE FALSE END
-          WHEN pm.fecha_fin >= CURRENT_DATE THEN TRUE 
-          ELSE FALSE 
-        END as vigente
+        -- Información del médico
+        pm_persona.nombre || ' ' || pm_persona.apellido_paterno as nombre_medico
       FROM prescripcion_medicamento pm
       INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
       INNER JOIN medicamento m ON pm.id_medicamento = m.id_medicamento
-      LEFT JOIN personal_medico personal ON dc.id_personal_creador = personal.id_personal_medico
-      WHERE dc.id_expediente = $1 
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+      LEFT JOIN persona pm_persona ON pm_rel.id_persona = pm_persona.id_persona
+      WHERE dc.id_expediente = $1
+        AND pm.activo = $2
         AND dc.estado != 'Anulado'
+      ORDER BY pm.fecha_inicio DESC, pm.id_prescripcion DESC
     `;
-        const values = [id_expediente];
-        if (activo === 'true') {
-            query += ` AND pm.activo = true`;
-        }
-        query += ` ORDER BY pm.fecha_inicio DESC, pm.id_prescripcion DESC`;
-        const response = await database_1.default.query(query, values);
+        const response = await database_1.default.query(query, [id_expediente, activo === 'true']);
         return res.status(200).json({
             success: true,
             message: 'Prescripciones del expediente obtenidas correctamente',
@@ -511,10 +463,10 @@ const getPrescripcionesByExpediente = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error al obtener prescripciones del expediente:', error);
+        console.error('Error al obtener prescripciones por expediente:', error);
         return res.status(500).json({
             success: false,
-            message: 'Error interno del servidor al obtener prescripciones del expediente',
+            message: 'Error interno del servidor al obtener prescripciones por expediente',
             error: process.env.NODE_ENV === 'development' ? error : {}
         });
     }
@@ -525,80 +477,69 @@ exports.getPrescripcionesByExpediente = getPrescripcionesByExpediente;
 // ==========================================
 const getEstadisticasPrescripciones = async (req, res) => {
     try {
-        const queries = {
-            totalPrescripciones: `
-        SELECT COUNT(*) as total 
-        FROM prescripcion_medicamento pm
-        INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
-        WHERE dc.estado != 'Anulado'
-      `,
-            prescripcionesActivas: `
-        SELECT COUNT(*) as total 
-        FROM prescripcion_medicamento pm
-        INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
-        WHERE pm.activo = true AND dc.estado != 'Anulado'
-      `,
-            medicamentosMasPrescritos: `
-        SELECT 
-          m.nombre as medicamento,
-          m.grupo_terapeutico,
-          COUNT(pm.id_prescripcion) as cantidad
-        FROM medicamento m
-        LEFT JOIN prescripcion_medicamento pm ON m.id_medicamento = pm.id_medicamento
-        INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
-        WHERE dc.estado != 'Anulado'
-        GROUP BY m.id_medicamento, m.nombre, m.grupo_terapeutico
-        ORDER BY cantidad DESC
-        LIMIT 10
-      `,
-            gruposTerapeuticos: `
-        SELECT 
-          m.grupo_terapeutico,
-          COUNT(pm.id_prescripcion) as cantidad
-        FROM medicamento m
-        LEFT JOIN prescripcion_medicamento pm ON m.id_medicamento = pm.id_medicamento
-        INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
-        WHERE dc.estado != 'Anulado' AND m.grupo_terapeutico IS NOT NULL
-        GROUP BY m.grupo_terapeutico
-        ORDER BY cantidad DESC
-      `,
-            prescripcionesRecientes: `
-        SELECT 
-          DATE(pm.fecha_inicio) as fecha,
-          COUNT(*) as cantidad
-        FROM prescripcion_medicamento pm
-        INNER JOIN documento_clinico dc ON pm.id_documento = dc.id_documento
-        WHERE pm.fecha_inicio >= NOW() - INTERVAL '30 days'
-          AND dc.estado != 'Anulado'
-        GROUP BY DATE(pm.fecha_inicio)
-        ORDER BY fecha DESC
-        LIMIT 30
-      `
-        };
-        const [total, activas, medicamentosMasPrescritos, gruposTerapeuticos, recientes] = await Promise.all([
-            database_1.default.query(queries.totalPrescripciones),
-            database_1.default.query(queries.prescripcionesActivas),
-            database_1.default.query(queries.medicamentosMasPrescritos),
-            database_1.default.query(queries.gruposTerapeuticos),
-            database_1.default.query(queries.prescripcionesRecientes)
-        ]);
+        // Medicamentos más prescritos
+        const masPrescritos = await database_1.default.query(`
+      SELECT 
+        m.id_medicamento,
+        m.codigo,
+        m.nombre,
+        m.presentacion,
+        m.grupo_terapeutico,
+        COUNT(pm.id_prescripcion) as total_prescripciones,
+        COUNT(CASE WHEN pm.activo = true THEN 1 END) as prescripciones_activas
+      FROM medicamento m
+      LEFT JOIN prescripcion_medicamento pm ON m.id_medicamento = pm.id_medicamento
+      GROUP BY m.id_medicamento, m.codigo, m.nombre, m.presentacion, m.grupo_terapeutico
+      HAVING COUNT(pm.id_prescripcion) > 0
+      ORDER BY total_prescripciones DESC
+      LIMIT 10
+    `);
+        // Prescripciones por grupo terapéutico
+        const porGrupo = await database_1.default.query(`
+      SELECT 
+        COALESCE(m.grupo_terapeutico, 'Sin grupo') as grupo_terapeutico,
+        COUNT(pm.id_prescripcion) as total_prescripciones,
+        COUNT(CASE WHEN pm.activo = true THEN 1 END) as prescripciones_activas
+      FROM prescripcion_medicamento pm
+      INNER JOIN medicamento m ON pm.id_medicamento = m.id_medicamento
+      GROUP BY m.grupo_terapeutico
+      ORDER BY total_prescripciones DESC
+    `);
+        // Prescripciones por mes
+        const porMes = await database_1.default.query(`
+      SELECT 
+        DATE_TRUNC('month', pm.fecha_inicio) as mes,
+        COUNT(*) as total_prescripciones
+      FROM prescripcion_medicamento pm
+      WHERE pm.fecha_inicio >= CURRENT_DATE - INTERVAL '6 months'
+      GROUP BY DATE_TRUNC('month', pm.fecha_inicio)
+      ORDER BY mes DESC
+    `);
+        // Estadísticas generales
+        const generales = await database_1.default.query(`
+      SELECT 
+        COUNT(*) as total_prescripciones,
+        COUNT(CASE WHEN activo = true THEN 1 END) as prescripciones_activas,
+        COUNT(CASE WHEN fecha_inicio >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as prescripciones_mes_actual,
+        COUNT(DISTINCT id_medicamento) as medicamentos_prescritos
+      FROM prescripcion_medicamento
+    `);
         return res.status(200).json({
             success: true,
             message: 'Estadísticas de prescripciones obtenidas correctamente',
             data: {
-                total: parseInt(total.rows[0].total),
-                activas: parseInt(activas.rows[0].total),
-                medicamentosMasPrescritos: medicamentosMasPrescritos.rows,
-                gruposTerapeuticos: gruposTerapeuticos.rows,
-                prescripcionesRecientes: recientes.rows
+                medicamentos_mas_prescritos: masPrescritos.rows,
+                prescripciones_por_grupo: porGrupo.rows,
+                prescripciones_por_mes: porMes.rows,
+                estadisticas_generales: generales.rows[0]
             }
         });
     }
     catch (error) {
-        console.error('Error al obtener estadísticas:', error);
+        console.error('Error al obtener estadísticas de prescripciones:', error);
         return res.status(500).json({
             success: false,
-            message: 'Error interno del servidor al obtener estadísticas',
+            message: 'Error interno del servidor al obtener estadísticas de prescripciones',
             error: process.env.NODE_ENV === 'development' ? error : {}
         });
     }
