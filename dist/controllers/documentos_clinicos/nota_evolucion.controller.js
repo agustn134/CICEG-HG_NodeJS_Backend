@@ -1,8 +1,4 @@
 "use strict";
-// // src/controllers/documentos_clinicos/nota_evolucion.controller.ts
-// import { Request, Response } from 'express';
-// import { QueryResult } from 'pg';
-// import pool from '../../config/database';
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -136,18 +132,19 @@ const getNotasEvolucion = async (req, res) => {
             values.push(fecha_inicio);
         }
         if (fecha_fin) {
-            conditions.push(`dc.fecha_elaboracion <= ${values.length + 1}`);
+            conditions.push(`dc.fecha_elaboracion <= $${values.length + 1}`);
             values.push(fecha_fin);
         }
         if (buscar) {
             conditions.push(`(
-        e.numero_expediente ILIKE ${values.length + 1} OR
-        (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE ${values.length + 1} OR
-        ne.subjetivo ILIKE ${values.length + 1} OR
-        ne.objetivo ILIKE ${values.length + 1} OR
-        ne.analisis ILIKE ${values.length + 1} OR
-        ne.plan ILIKE ${values.length + 1}
-      )`);
+    e.numero_expediente ILIKE $${values.length + 1} OR
+    (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
+    ne.subjetivo ILIKE $${values.length + 1} OR
+    ne.objetivo ILIKE $${values.length + 1} OR
+    ne.analisis ILIKE $${values.length + 1} OR
+    ne.plan ILIKE $${values.length + 1}
+  )`);
+            // ↑ Agregar $ antes de cada número
             values.push(`%${buscar}%`);
         }
         // Solo mostrar documentos no anulados
@@ -159,7 +156,7 @@ const getNotasEvolucion = async (req, res) => {
             countQuery += whereClause;
         }
         // Agregar ordenamiento y paginación
-        baseQuery += ` ORDER BY dc.fecha_elaboracion DESC LIMIT ${values.length + 1} OFFSET ${values.length + 2}`;
+        baseQuery += ` ORDER BY dc.fecha_elaboracion DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
         values.push(limitNum, offset);
         // Ejecutar consultas
         const [dataResponse, countResponse] = await Promise.all([
