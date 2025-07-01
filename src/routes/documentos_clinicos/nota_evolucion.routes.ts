@@ -8,10 +8,8 @@ import {
   deleteNotaEvolucion,
   getNotasEvolucionByExpediente,
   getEstadisticasNotasEvolucion,
-  getEvolucionSignosVitales,
+  // getEvolucionSignosVitales,
   getNotaEvolucionByDocumento,
-  createNotaEvolucionRapida,
-  getResumenEvolucionClinica
 } from "../../controllers/documentos_clinicos/nota_evolucion.controller";
 
 const router = Router();
@@ -24,10 +22,10 @@ const router = Router();
 router.get("/estadisticas", getEstadisticasNotasEvolucion);
 
 // GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente/resumen - Resumen de evolución clínica
-router.get("/expediente/:id_expediente/resumen", getResumenEvolucionClinica);
+// router.get("/expediente/:id_expediente/resumen", getResumenEvolucionClinica);
 
 // GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente/signos-vitales - Evolución de signos vitales
-router.get("/expediente/:id_expediente/signos-vitales", getEvolucionSignosVitales);
+// router.get("/expediente/:id_expediente/signos-vitales", getEvolucionSignosVitales);
 
 // GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente - Obtener notas por expediente
 router.get("/expediente/:id_expediente", getNotasEvolucionByExpediente);
@@ -36,7 +34,7 @@ router.get("/expediente/:id_expediente", getNotasEvolucionByExpediente);
 router.get("/documento/:id_documento", getNotaEvolucionByDocumento);
 
 // POST /api/documentos-clinicos/notas-evolucion/rapida - Crear nota de evolución rápida (con función almacenada)
-router.post("/rapida", createNotaEvolucionRapida);
+// router.post("/rapida", createNotaEvolucionRapida);
 
 // GET /api/documentos-clinicos/notas-evolucion - Obtener todas las notas de evolución
 // Acepta query params: ?page=1&limit=10&id_expediente=1&buscar=fiebre&dias_hospitalizacion_min=5

@@ -65,12 +65,12 @@ export const getNotasUrgencias = async (req: Request, res: Response): Promise<Re
         dc.fecha_elaboracion as fecha_documento,
         dc.estado as estado_documento,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
         p.fecha_nacimiento,
         p.sexo,
-        pm.nombres || ' ' || pm.apellido_paterno as medico_urgenciologo,
-        pm.especialidad,
-        pm.cedula_profesional,
+        pm.nombre || ' ' || pm.apellido_paterno as medico_urgenciologo,
+        pm_rel.especialidad,
+        pm_rel.numero_cedula,
         gc.nombre as guia_clinica_nombre,
         gc.codigo as guia_clinica_codigo,
         ai.nombre as area_interconsulta_nombre,
@@ -102,7 +102,8 @@ export const getNotasUrgencias = async (req: Request, res: Response): Promise<Re
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
       INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
       INNER JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN guia_clinica gc ON nu.id_guia_diagnostico = gc.id_guia_diagnostico
       LEFT JOIN area_interconsulta ai ON nu.area_interconsulta = ai.id_area_interconsulta
       LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
@@ -155,7 +156,7 @@ export const getNotasUrgencias = async (req: Request, res: Response): Promise<Re
     if (buscar) {
       conditions.push(`(
         e.numero_expediente ILIKE $${values.length + 1} OR
-        (p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
+        (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
         nu.motivo_atencion ILIKE $${values.length + 1} OR
         nu.diagnostico ILIKE $${values.length + 1} OR
         nu.estado_conciencia ILIKE $${values.length + 1}
@@ -238,14 +239,13 @@ export const getNotaUrgenciasById = async (req: Request, res: Response): Promise
         dc.id_personal_creador,
         e.numero_expediente,
         e.fecha_apertura,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
         p.fecha_nacimiento,
         p.sexo,
         p.curp,
-        pac.numero_seguro_social,
-        pm.nombres || ' ' || pm.apellido_paterno as medico_urgenciologo,
-        pm.especialidad,
-        pm.cedula_profesional,
+        pm.nombre || ' ' || pm.apellido_paterno as medico_urgenciologo,
+        pm_rel.especialidad,
+        pm_rel.numero_cedula,
         gc.nombre as guia_clinica_nombre,
         gc.codigo as guia_clinica_codigo,
         gc.descripcion as guia_clinica_descripcion,
@@ -609,8 +609,8 @@ export const getNotasUrgenciasByExpediente = async (req: Request, res: Response)
       SELECT 
         nu.*,
         dc.fecha_elaboracion as fecha_documento,
-        pm.nombres || ' ' || pm.apellido_paterno as medico_urgenciologo,
-        pm.especialidad,
+        pm.nombre || ' ' || pm.apellido_paterno as medico_urgenciologo,
+        pm_rel.especialidad,
         ai.nombre as area_interconsulta_nombre,
         gc.nombre as guia_clinica_nombre,
         s.nombre as servicio_nombre,
@@ -669,9 +669,9 @@ export const getNotaUrgenciasByDocumento = async (req: Request, res: Response): 
         dc.fecha_elaboracion as fecha_documento,
         dc.estado as estado_documento,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
-        pm.nombres || ' ' || pm.apellido_paterno as medico_urgenciologo,
-        pm.especialidad,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        pm.nombre || ' ' || pm.apellido_paterno as medico_urgenciologo,
+        pm_rel.especialidad,
         ai.nombre as area_interconsulta_nombre,
         gc.nombre as guia_clinica_nombre
       FROM nota_urgencias nu
@@ -860,14 +860,14 @@ export const getPanelUrgenciasTiempoReal = async (req: Request, res: Response): 
       SELECT 
         nu.id_nota_urgencias,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
         EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
         p.sexo,
         nu.motivo_atencion,
         nu.estado_conciencia,
         nu.diagnostico,
         dc.fecha_elaboracion as hora_llegada,
-        pm.nombres || ' ' || pm.apellido_paterno as medico_atencion,
+        pm.nombre || ' ' || pm.apellido_paterno as medico_atencion,
         ai.nombre as interconsulta_solicitada,
         -- Tiempo de espera/atención
         EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - dc.fecha_elaboracion))/60 as minutos_desde_llegada,
@@ -961,7 +961,7 @@ export const getPacientesFrecuentesUrgencias = async (req: Request, res: Respons
       SELECT 
         e.id_expediente,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
         p.fecha_nacimiento,
         EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
         p.sexo,
@@ -987,7 +987,7 @@ export const getPacientesFrecuentesUrgencias = async (req: Request, res: Respons
       INNER JOIN nota_urgencias nu ON dc.id_documento = nu.id_documento
       WHERE dc.fecha_elaboracion >= NOW() - INTERVAL '${parseInt(meses)} months'
         AND dc.estado != 'Anulado'
-      GROUP BY e.id_expediente, e.numero_expediente, p.nombres, p.apellido_paterno, 
+      GROUP BY e.id_expediente, e.numero_expediente, p.nombre, p.apellido_paterno, 
                p.apellido_materno, p.fecha_nacimiento, p.sexo
       HAVING COUNT(nu.id_nota_urgencias) >= ${parseInt(minimo_visitas)}
       ORDER BY total_visitas_urgencias DESC, ultima_visita DESC

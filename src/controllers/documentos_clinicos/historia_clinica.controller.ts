@@ -74,12 +74,11 @@ export const getHistoriasClinicas = async (req: Request, res: Response): Promise
       fecha_fin
     } = req.query as any;
 
-    // Validar parámetros de paginación
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 10;
     const offset = (pageNum - 1) * limitNum;
 
-    // Query base con JOINs para información completa
+    // Query base CORREGIDA - SIN pac.numero_seguro_social
     let baseQuery = `
       SELECT 
         hc.*,
@@ -87,12 +86,17 @@ export const getHistoriasClinicas = async (req: Request, res: Response): Promise
         dc.fecha_elaboracion,
         dc.estado as estado_documento,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
         p.fecha_nacimiento,
         p.sexo,
-        pm.nombres || ' ' || pm.apellido_paterno as medico_creador,
-        pm.especialidad,
-        pm.cedula_profesional,
+        p.curp,
+        CASE 
+          WHEN pm_rel.id_personal_medico IS NOT NULL 
+          THEN pm.nombre || ' ' || pm.apellido_paterno 
+          ELSE 'Sin asignar' 
+        END as medico_creador,
+        COALESCE(pm_rel.especialidad, 'No especificada') as especialidad,
+        pm_rel.numero_cedula as cedula_profesional,
         gc.nombre as guia_clinica_nombre,
         gc.codigo as guia_clinica_codigo
       FROM historia_clinica hc
@@ -100,7 +104,8 @@ export const getHistoriasClinicas = async (req: Request, res: Response): Promise
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
       INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
       INNER JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+      LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN guia_clinica gc ON hc.id_guia_diagnostico = gc.id_guia_diagnostico
     `;
 
@@ -140,7 +145,7 @@ export const getHistoriasClinicas = async (req: Request, res: Response): Promise
     if (buscar) {
       conditions.push(`(
         e.numero_expediente ILIKE $${values.length + 1} OR
-        (p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
+        (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
         hc.padecimiento_actual ILIKE $${values.length + 1} OR
         hc.impresion_diagnostica ILIKE $${values.length + 1}
       )`);
@@ -173,14 +178,16 @@ export const getHistoriasClinicas = async (req: Request, res: Response): Promise
     return res.status(200).json({
       success: true,
       message: 'Historias clínicas obtenidas correctamente',
-      data: dataResponse.rows,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-        totalPages,
-        hasNext: pageNum < totalPages,
-        hasPrev: pageNum > 1
+      data: {
+        data: dataResponse.rows,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1
+        }
       }
     });
 
@@ -193,6 +200,7 @@ export const getHistoriasClinicas = async (req: Request, res: Response): Promise
     });
   }
 };
+
 
 // ==========================================
 // OBTENER HISTORIA CLÍNICA POR ID
@@ -216,14 +224,17 @@ export const getHistoriaClinicaById = async (req: Request, res: Response): Promi
         dc.estado as estado_documento,
         dc.id_personal_creador,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
         p.fecha_nacimiento,
         p.sexo,
         p.curp,
-        pac.numero_seguro_social,
-        pm.nombres || ' ' || pm.apellido_paterno as medico_creador,
-        pm.especialidad,
-        pm.cedula_profesional,
+        CASE 
+  WHEN pm_rel.id_personal_medico IS NOT NULL 
+  THEN pm.nombre || ' ' || pm.apellido_paterno 
+  ELSE 'Sin asignar' 
+END as medico_creador,
+        COALESCE(pm_rel.especialidad, 'No especificada') as especialidad,
+        pm_rel.numero_cedula as cedula_profesional,
         gc.nombre as guia_clinica_nombre,
         gc.codigo as guia_clinica_codigo,
         gc.descripcion as guia_clinica_descripcion
@@ -232,7 +243,8 @@ export const getHistoriaClinicaById = async (req: Request, res: Response): Promi
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
       INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
       INNER JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+      LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN guia_clinica gc ON hc.id_guia_diagnostico = gc.id_guia_diagnostico
       WHERE hc.id_historia_clinica = $1
     `;
@@ -261,7 +273,6 @@ export const getHistoriaClinicaById = async (req: Request, res: Response): Promi
     });
   }
 };
-
 // ==========================================
 // CREAR NUEVA HISTORIA CLÍNICA
 // ==========================================
@@ -603,7 +614,7 @@ export const getHistoriaClinicaByDocumento = async (req: Request, res: Response)
         dc.fecha_elaboracion,
         dc.estado as estado_documento,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
         gc.nombre as guia_clinica_nombre
       FROM historia_clinica hc
       INNER JOIN documento_clinico dc ON hc.id_documento = dc.id_documento

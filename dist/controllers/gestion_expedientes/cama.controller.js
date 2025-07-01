@@ -24,7 +24,7 @@ const getCamas = async (req, res) => {
         -- Información del paciente actual (si está ocupada)
         CASE 
           WHEN c.estado = 'Ocupada' THEN (
-            SELECT p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')
+            SELECT p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')
             FROM internamiento i
             INNER JOIN expediente e ON i.id_expediente = e.id_expediente
             INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
@@ -258,12 +258,12 @@ const getCamaById = async (req, res) => {
         CASE 
           WHEN c.estado = 'Ocupada' THEN (
             SELECT jsonb_build_object(
-              'nombre', p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, ''),
+              'nombre', p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, ''),
               'expediente', e.numero_expediente,
               'fecha_ingreso', i.fecha_ingreso,
               'motivo_ingreso', i.motivo_ingreso,
               'diagnostico', i.diagnostico_ingreso,
-              'medico_responsable', pm_p.nombres || ' ' || pm_p.apellido_paterno,
+              'medico_responsable', pm_p.nombre || ' ' || pm_p.apellido_paterno,
               'dias_hospitalizacion', EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - i.fecha_ingreso))/86400
             )
             FROM internamiento i
@@ -283,7 +283,7 @@ const getCamaById = async (req, res) => {
         (
           SELECT jsonb_agg(
             jsonb_build_object(
-              'paciente', p.nombres || ' ' || p.apellido_paterno,
+              'paciente', p.nombre || ' ' || p.apellido_paterno,
               'fecha_ingreso', i.fecha_ingreso,
               'fecha_egreso', i.fecha_egreso,
               'dias_estancia', EXTRACT(EPOCH FROM (COALESCE(i.fecha_egreso, CURRENT_TIMESTAMP) - i.fecha_ingreso))/86400,
@@ -350,7 +350,7 @@ const getOcupacionTiempoReal = async (req, res) => {
         c.estado,
         CASE 
           WHEN c.estado = 'Ocupada' THEN 
-            p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')
+            p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')
           ELSE NULL
         END as paciente,
         CASE 
@@ -368,7 +368,7 @@ const getOcupacionTiempoReal = async (req, res) => {
         END as diagnostico,
         CASE 
           WHEN c.estado = 'Ocupada' THEN 
-            pm_p.nombres || ' ' || pm_p.apellido_paterno
+            pm_p.nombre || ' ' || pm_p.apellido_paterno
           ELSE NULL
         END as medico_responsable
       FROM cama c
@@ -571,12 +571,12 @@ exports.getReporteRotacionCamas = getReporteRotacionCamas;
 //         CASE 
 //           WHEN c.estado = 'Ocupada' THEN (
 //             SELECT jsonb_build_object(
-//               'nombre', p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, ''),
+//               'nombre', p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, ''),
 //               'expediente', e.numero_expediente,
 //               'fecha_ingreso', i.fecha_ingreso,
 //               'motivo_ingreso', i.motivo_ingreso,
 //               'diagnostico', i.diagnostico_ingreso,
-//               'medico_responsable', pm_p.nombres || ' ' || pm_p.apellido_paterno,
+//               'medico_responsable', pm_p.nombre || ' ' || pm_p.apellido_paterno,
 //               'dias_hospitalizacion', EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - i.fecha_ingreso))/86400
 //             )
 //             FROM internamiento i
@@ -596,7 +596,7 @@ exports.getReporteRotacionCamas = getReporteRotacionCamas;
 //         (
 //           SELECT jsonb_agg(
 //             jsonb_build_object(
-//               'paciente', p.nombres || ' ' || p.apellido_paterno,
+//               'paciente', p.nombre || ' ' || p.apellido_paterno,
 //               'fecha_ingreso', i.fecha_ingreso,
 //               'fecha_egreso', i.fecha_egreso,
 //               'dias_estancia', EXTRACT(EPOCH FROM (COALESCE(i.fecha_egreso, CURRENT_TIMESTAMP) - i.fecha_ingreso))/86400,
