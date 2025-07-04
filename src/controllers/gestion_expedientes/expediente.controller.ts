@@ -3,207 +3,6 @@ import { Request, Response } from 'express';
 import { QueryResult } from 'pg';
 import pool from '../../config/database';
 
-// ==========================================
-// OBTENER TODOS LOS EXPEDIENTES
-// ==========================================
-// export const getExpedientes = async (req: Request, res: Response): Promise<Response> => {
-//   try {
-//     const { 
-//       estado, 
-//       fecha_inicio, 
-//       fecha_fin, 
-//       paciente_id, 
-//       tiene_internamiento_activo, 
-//       buscar,
-//       limit = 50,
-//       offset = 0 
-//     } = req.query;
-    
-//     let query = `
-//       SELECT 
-//         e.id_expediente,
-//         e.numero_expediente,
-//         e.fecha_apertura,
-//         e.estado,
-//         e.notas_administrativas,
-        
-//         -- Datos del paciente
-//         pac.id_paciente,
-//         CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_paciente,
-//         p.fecha_nacimiento,
-//         p.sexo,
-//         p.curp,
-//         edad_en_anos(p.fecha_nacimiento) as edad,
-//         ts.nombre as tipo_sangre,
-        
-//         -- Estadísticas del expediente
-//         COUNT(dc.id_documento) as total_documentos,
-//         COUNT(CASE WHEN dc.estado = 'Activo' THEN 1 END) as documentos_activos,
-//         COUNT(CASE WHEN dc.fecha_elaboracion >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as documentos_mes_actual,
-        
-//         -- Internamientos
-//         COUNT(i.id_internamiento) as total_internamientos,
-//         COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos,
-//         MAX(i.fecha_ingreso) as ultimo_ingreso,
-        
-//         -- Servicio actual si hay internamiento activo
-//         s.nombre as servicio_actual,
-//         c.numero as cama_actual,
-        
-//         -- Médico responsable actual
-//         CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_responsable_actual
-        
-//       FROM expediente e
-//       JOIN paciente pac ON e.id_paciente = pac.id_paciente
-//       JOIN persona p ON pac.id_persona = p.id_persona
-//       LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
-//       LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
-//       LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
-//       LEFT JOIN internamiento i_activo ON e.id_expediente = i_activo.id_expediente AND i_activo.fecha_egreso IS NULL
-//       LEFT JOIN servicio s ON i_activo.id_servicio = s.id_servicio
-//       LEFT JOIN cama c ON i_activo.id_cama = c.id_cama
-//       LEFT JOIN personal_medico pm ON i_activo.id_medico_responsable = pm.id_personal_medico
-//       LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
-//       WHERE 1=1
-//     `;
-    
-//     const params: any[] = [];
-//     let paramCounter = 1;
-    
-//     // Filtros
-//     if (estado) {
-//       query += ` AND e.estado = $${paramCounter}`;
-//       params.push(estado);
-//       paramCounter++;
-//     }
-    
-//     if (fecha_inicio) {
-//       query += ` AND DATE(e.fecha_apertura) >= $${paramCounter}`;
-//       params.push(fecha_inicio);
-//       paramCounter++;
-//     }
-    
-//     if (fecha_fin) {
-//       query += ` AND DATE(e.fecha_apertura) <= $${paramCounter}`;
-//       params.push(fecha_fin);
-//       paramCounter++;
-//     }
-    
-//     if (paciente_id) {
-//       query += ` AND pac.id_paciente = $${paramCounter}`;
-//       params.push(paciente_id);
-//       paramCounter++;
-//     }
-    
-//     if (buscar) {
-//       query += ` AND (
-//         UPPER(e.numero_expediente) LIKE UPPER($${paramCounter}) OR
-//         UPPER(p.nombre) LIKE UPPER($${paramCounter}) OR 
-//         UPPER(p.apellido_paterno) LIKE UPPER($${paramCounter}) OR 
-//         UPPER(p.apellido_materno) LIKE UPPER($${paramCounter}) OR
-//         UPPER(p.curp) LIKE UPPER($${paramCounter})
-//       )`;
-//       params.push(`%${buscar}%`);
-//       paramCounter++;
-//     }
-    
-//     query += `
-//       GROUP BY e.id_expediente, e.numero_expediente, e.fecha_apertura, e.estado, 
-//                e.notas_administrativas, pac.id_paciente, p.nombre, p.apellido_paterno, 
-//                p.apellido_materno, p.fecha_nacimiento, p.sexo, p.curp, ts.nombre,
-//                s.nombre, c.numero, pm_p.nombre, pm_p.apellido_paterno
-//     `;
-    
-//     // Filtro por internamiento activo (aplicado después del GROUP BY)
-//     if (tiene_internamiento_activo !== undefined) {
-//       if (tiene_internamiento_activo === 'true') {
-//         query += ` HAVING COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) > 0`;
-//       } else {
-//         query += ` HAVING COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) = 0`;
-//       }
-//     }
-    
-//     query += ` ORDER BY e.fecha_apertura DESC`;
-    
-//     // Paginación
-//     query += ` LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
-//     params.push(parseInt(limit as string), parseInt(offset as string));
-    
-//     const response: QueryResult = await pool.query(query, params);
-    
-//     // Contar total para paginación
-//     let countQuery = `
-//       SELECT COUNT(DISTINCT e.id_expediente) as total
-//       FROM expediente e
-//       JOIN paciente pac ON e.id_paciente = pac.id_paciente
-//       JOIN persona p ON pac.id_persona = p.id_persona
-//       WHERE 1=1
-//     `;
-    
-//     const countParams = params.slice(0, -2); // Remover limit y offset
-//     let countParamCounter = 1;
-    
-//     if (estado) {
-//       countQuery += ` AND e.estado = $${countParamCounter}`;
-//       countParamCounter++;
-//     }
-//     if (fecha_inicio) {
-//       countQuery += ` AND DATE(e.fecha_apertura) >= $${countParamCounter}`;
-//       countParamCounter++;
-//     }
-//     if (fecha_fin) {
-//       countQuery += ` AND DATE(e.fecha_apertura) <= $${countParamCounter}`;
-//       countParamCounter++;
-//     }
-//     if (paciente_id) {
-//       countQuery += ` AND pac.id_paciente = $${countParamCounter}`;
-//       countParamCounter++;
-//     }
-//     if (buscar) {
-//       countQuery += ` AND (
-//         UPPER(e.numero_expediente) LIKE UPPER($${countParamCounter}) OR
-//         UPPER(p.nombre) LIKE UPPER($${countParamCounter}) OR 
-//         UPPER(p.apellido_paterno) LIKE UPPER($${countParamCounter}) OR 
-//         UPPER(p.apellido_materno) LIKE UPPER($${countParamCounter}) OR
-//         UPPER(p.curp) LIKE UPPER($${countParamCounter})
-//       )`;
-//       countParamCounter++;
-//     }
-    
-//     const countResponse: QueryResult = await pool.query(countQuery, countParams);
-//     const totalRecords = parseInt(countResponse.rows[0].total);
-    
-//     return res.status(200).json({
-//       success: true,
-//       message: 'Expedientes obtenidos correctamente',
-//       data: response.rows,
-//       pagination: {
-//         total: totalRecords,
-//         limit: parseInt(limit as string),
-//         offset: parseInt(offset as string),
-//         pages: Math.ceil(totalRecords / parseInt(limit as string))
-//       },
-//       filtros_aplicados: {
-//         estado: estado || 'todos',
-//         fecha_inicio: fecha_inicio || null,
-//         fecha_fin: fecha_fin || null,
-//         paciente_id: paciente_id || null,
-//         tiene_internamiento_activo: tiene_internamiento_activo || 'todos',
-//         buscar: buscar || 'sin filtro'
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error al obtener expedientes:', error);
-//     return res.status(500).json({
-//       success: false,
-//       message: 'Error interno del servidor al obtener expedientes',
-//       error: process.env.NODE_ENV === 'development' ? error : {}
-//     });
-//   } finally {
-//     client.release();
-//   }
-// };
-
 
 
 // ==========================================
@@ -648,6 +447,7 @@ export const getExpedientesByPaciente = async (req: Request, res: Response): Pro
   }
 };
 
+
 // ==========================================
 // BUSCAR EXPEDIENTES (PARA AUTOCOMPLETE)
 // ==========================================
@@ -821,131 +621,6 @@ export const getDashboardExpedientes = async (req: Request, res: Response): Prom
   }
 };
 
-// ==========================================
-// VALIDAR ACCESO A EXPEDIENTE (REINGRESO)
-// ==========================================
-// export const validarAccesoExpediente = async (req: Request, res: Response): Promise<Response> => {
-//   const client = await pool.connect();
-  
-//   try {
-//     await client.query('BEGIN');
-    
-//     const { id } = req.params;
-//     const { id_medico, justificacion_acceso } = req.body;
-    
-//     if (!id || isNaN(parseInt(id))) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'El ID del expediente debe ser un número válido'
-//       });
-//     }
-    
-//     if (!id_medico) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'El ID del médico es obligatorio'
-//       });
-//     }
-    
-//     // Verificar si requiere validación
-//     const validacionQuery = `
-//       SELECT validar_reingreso_paciente($1, $2) as requiere_validacion
-//     `;
-    
-//     const validacionResponse: QueryResult = await client.query(validacionQuery, [id, id_medico]);
-//     const requiereValidacion = validacionResponse.rows[0]?.requiere_validacion || false;
-    
-//     if (requiereValidacion) {
-//       // Crear registro de validación de reingreso
-//       const validacionReingresoQuery = `
-//         INSERT INTO validacion_reingreso (
-//           id_expediente,
-//           id_medico_validador,
-//           solicita_acceso_historico,
-//           justificacion_acceso,
-//           validacion_completa
-//         )
-//         VALUES ($1, $2, true, $3, false)
-//         RETURNING id_validacion
-//       `;
-      
-//       const validacionReingresoResponse: QueryResult = await client.query(validacionReingresoQuery, [
-//         id,
-//         id_medico,
-//         justificacion_acceso || 'Acceso solicitado para reingreso'
-//       ]);
-      
-//       // Generar alerta para supervisor
-//       const alertaQuery = `
-//         INSERT INTO alertas_sistema (
-//           tipo_alerta,
-//           mensaje,
-//           id_expediente,
-//           id_medico,
-//           estado
-//         )
-//         VALUES (
-//           'ADVERTENCIA',
-//           'Solicitud de acceso a datos históricos para reingreso de paciente',
-//           $1,
-//           $2,
-//           'ACTIVA'
-//         )
-//       `;
-      
-//       await client.query(alertaQuery, [id, id_medico]);
-      
-//       await client.query('COMMIT');
-      
-//       return res.status(200).json({
-//         success: true,
-//         message: 'Validación de reingreso iniciada. Se requiere aprobación de supervisor',
-//         data: {
-//           requiere_validacion: true,
-//           id_validacion: validacionReingresoResponse.rows[0].id_validacion,
-//           acceso_inmediato: false
-//         }
-//       });
-//     }
-    
-//     // Registrar acceso normal
-//     await client.query(
-//       `SELECT registrar_auditoria($1, $2, $3, $4, $5, $6)`,
-//       [
-//         id,
-//         id_medico,
-//         'consulta',
-//         null,
-//         null,
-//         'Acceso normal al expediente'
-//       ]
-//     );
-    
-//     await client.query('COMMIT');
-    
-//     return res.status(200).json({
-//       success: true,
-//       message: 'Acceso al expediente autorizado',
-//       data: {
-//         requiere_validacion: false,
-//         acceso_inmediato: true
-//       }
-//     });
-//   } catch (error) {
-//     await client.query('ROLLBACK');
-//     console.error('Error al validar acceso a expediente:', error);
-//     return res.status(500).json({
-//       success: false,
-//       message: 'Error interno del servidor al validar acceso',
-//       error: process.env.NODE_ENV === 'development' ? error : {}
-//     });
-//   } finally {
-//     client.release();
-//   }
-// };.env.NODE_ENV === 'development' ? error : {}
-//     });
-//   }
-// };
 
 // ==========================================
 // VALIDAR ACCESO A EXPEDIENTE (REINGRESO)
@@ -2196,6 +1871,105 @@ export const validarReingresoExpediente = async (req: Request, res: Response): P
   }
 };
 
+
+export const getExpedienteByPacienteId = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { pacienteId } = req.params;
+    
+    const query = `
+      SELECT 
+        e.id_expediente,
+        e.numero_expediente,
+        e.fecha_apertura,
+        e.estado,
+        e.notas_administrativas,
+        
+        -- Datos del paciente
+        pac.id_paciente,
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as nombre_paciente,
+        p.fecha_nacimiento,
+        p.sexo,
+        p.curp,
+        EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
+        ts.nombre as tipo_sangre,
+        
+        -- Estadísticas del expediente
+        (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente) as total_documentos,
+        (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente AND dc.estado = 'Activo') as documentos_activos,
+        (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente) as total_internamientos,
+        (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente AND i.fecha_egreso IS NULL) as internamientos_activos,
+        
+        -- Información del internamiento activo (si existe)
+        i_activo.id_internamiento as internamiento_activo_id,
+        s.nombre as servicio_actual,
+        c.numero as cama_actual,
+        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_responsable_actual
+        
+      FROM expediente e
+      JOIN paciente pac ON e.id_paciente = pac.id_paciente
+      JOIN persona p ON pac.id_persona = p.id_persona
+      LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
+      LEFT JOIN internamiento i_activo ON e.id_expediente = i_activo.id_expediente AND i_activo.fecha_egreso IS NULL
+      LEFT JOIN servicio s ON i_activo.id_servicio = s.id_servicio
+      LEFT JOIN cama c ON i_activo.id_cama = c.id_cama
+      LEFT JOIN personal_medico pm ON i_activo.id_medico_responsable = pm.id_personal_medico
+      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
+      WHERE pac.id_paciente = $1
+      ORDER BY e.fecha_apertura DESC
+      LIMIT 1
+    `;
+    
+    const result = await pool.query(query, [pacienteId]);
+    
+    if (result.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: 'No se encontró expediente para este paciente'
+      });
+      return;
+    }
+    
+    const expedienteData = result.rows[0];
+    
+    const response = {
+      success: true,
+      message: 'Expediente obtenido exitosamente',
+      data: {
+        id_expediente: expedienteData.id_expediente,
+        numero_expediente: expedienteData.numero_expediente,
+        fecha_apertura: expedienteData.fecha_apertura,
+        estado: expedienteData.estado,
+        notas_administrativas: expedienteData.notas_administrativas,
+        id_paciente: expedienteData.id_paciente,
+        nombre_paciente: expedienteData.nombre_paciente,
+        fecha_nacimiento: expedienteData.fecha_nacimiento,
+        sexo: expedienteData.sexo,
+        curp: expedienteData.curp,
+        edad: expedienteData.edad,
+        tipo_sangre: expedienteData.tipo_sangre,
+        total_documentos: expedienteData.total_documentos,
+        documentos_activos: expedienteData.documentos_activos,
+        total_internamientos: expedienteData.total_internamientos,
+        internamientos_activos: expedienteData.internamientos_activos,
+        servicio_actual: expedienteData.servicio_actual,
+        cama_actual: expedienteData.cama_actual,
+        medico_responsable_actual: expedienteData.medico_responsable_actual
+      }
+    };
+    
+    res.status(200).json(response);
+    
+  } catch (error) {
+    console.error('Error al obtener expediente por paciente ID:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener expediente',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
+
+
 // ==========================================
 // EXPORTACIONES
 // ==========================================
@@ -2206,6 +1980,7 @@ export default {
   updateExpediente,
   deleteExpediente,
   getExpedientesByPaciente,
+  getExpedienteByPacienteId,  // ✅ AGREGAR ESTA LÍNEA
   buscarExpedientes,
   getDashboardExpedientes,
   validarAccesoExpediente,
@@ -2215,3 +1990,4 @@ export default {
   generarReporteExpediente,
   validarReingresoExpediente
 };
+  

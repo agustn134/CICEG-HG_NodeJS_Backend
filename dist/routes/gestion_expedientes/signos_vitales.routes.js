@@ -26,6 +26,7 @@ router.get("/", signos_vitales_controller_1.getSignosVitales);
 // GET /api/gestion-expedientes/signos-vitales/:id
 // Obtener signos vitales por ID específico
 router.get("/:id", signos_vitales_controller_1.getSignosVitalesById);
+router.get('/paciente/:pacienteId', signos_vitales_controller_1.getSignosVitalesByPacienteId);
 // POST /api/gestion-expedientes/signos-vitales
 // Crear nuevos signos vitales
 router.post("/", signos_vitales_controller_1.createSignosVitales);

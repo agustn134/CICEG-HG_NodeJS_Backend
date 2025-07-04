@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   getSignosVitales,
   getSignosVitalesById,
+  getSignosVitalesByPacienteId,  // ✅ IMPORTAR NUEVA FUNCIÓN
   createSignosVitales,
   updateSignosVitales,
   deleteSignosVitales,
@@ -42,6 +43,9 @@ router.get("/", getSignosVitales);
 // Obtener signos vitales por ID específico
 router.get("/:id", getSignosVitalesById);
 
+router.get('/paciente/:pacienteId', getSignosVitalesByPacienteId);
+
+
 // POST /api/gestion-expedientes/signos-vitales
 // Crear nuevos signos vitales
 router.post("/", createSignosVitales);
@@ -53,5 +57,7 @@ router.put("/:id", updateSignosVitales);
 // DELETE /api/gestion-expedientes/signos-vitales/:id
 // Eliminar (anular) signos vitales
 router.delete("/:id", deleteSignosVitales);
+
+
 
 export default router;

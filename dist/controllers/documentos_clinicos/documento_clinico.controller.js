@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getEstadisticasDocumentos = exports.getDocumentosByExpediente = exports.deleteDocumentoClinico = exports.updateDocumentoClinico = exports.createDocumentoClinico = exports.getDocumentoClinicoById = exports.getDocumentosClinicos = void 0;
+exports.getEstadisticasDocumentos = exports.deleteDocumentoClinico = exports.updateDocumentoClinico = exports.createDocumentoClinico = exports.getDocumentosByExpediente = exports.getDocumentoClinicoById = exports.getDocumentosClinicos = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 // ==========================================
 // OBTENER TODOS LOS DOCUMENTOS CLÍNICOS CON FILTROS
@@ -15,14 +15,14 @@ const getDocumentosClinicos = async (req, res) => {
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 10;
         const offset = (pageNum - 1) * limitNum;
-        // Construir query base con JOINs para información completa
+        // ✅ CONSULTA CORREGIDA: estructura correcta de tablas
         let baseQuery = `
       SELECT 
         dc.*,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as paciente_nombre,
         td.nombre as tipo_documento_nombre,
-        pm.nombres || ' ' || pm.apellido_paterno as personal_creador_nombre,
+        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as personal_creador_nombre,
         pm.especialidad,
         i.fecha_ingreso,
         i.motivo_ingreso,
@@ -33,6 +33,7 @@ const getDocumentosClinicos = async (req, res) => {
       LEFT JOIN persona p ON pac.id_persona = p.id_persona
       LEFT JOIN tipo_documento td ON dc.id_tipo_documento = td.id_tipo_documento
       LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
+      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
       LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
       LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
     `;
@@ -74,7 +75,7 @@ const getDocumentosClinicos = async (req, res) => {
         if (buscar) {
             conditions.push(`(
         e.numero_expediente ILIKE $${values.length + 1} OR
-        (p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
         td.nombre ILIKE $${values.length + 1}
       )`);
             values.push(`%${buscar}%`);
@@ -136,12 +137,12 @@ const getDocumentoClinicoById = async (req, res) => {
       SELECT 
         dc.*,
         e.numero_expediente,
-        p.nombres || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as paciente_nombre,
         td.nombre as tipo_documento_nombre,
         td.descripcion as tipo_documento_descripcion,
-        pm.nombres || ' ' || pm.apellido_paterno as personal_creador_nombre,
+        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as personal_creador_nombre,
         pm.especialidad,
-        pm.cedula_profesional,
+        pm.numero_cedula as cedula_profesional,
         i.fecha_ingreso,
         i.fecha_egreso,
         i.motivo_ingreso,
@@ -153,6 +154,7 @@ const getDocumentoClinicoById = async (req, res) => {
       LEFT JOIN persona p ON pac.id_persona = p.id_persona
       LEFT JOIN tipo_documento td ON dc.id_tipo_documento = td.id_tipo_documento
       LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
+      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
       LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
       LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
       WHERE dc.id_documento = $1
@@ -180,6 +182,147 @@ const getDocumentoClinicoById = async (req, res) => {
     }
 };
 exports.getDocumentoClinicoById = getDocumentoClinicoById;
+// ==========================================
+// OBTENER DOCUMENTOS POR EXPEDIENTE
+// ==========================================
+const getDocumentosByExpediente = async (req, res) => {
+    try {
+        const { expedienteId } = req.params;
+        const { fecha_inicio, fecha_fin, tipo_documento, estado = 'Activo', limit = 50, offset = 0 } = req.query;
+        let query = `
+      SELECT 
+        dc.id_documento,
+        dc.fecha_elaboracion,
+        dc.estado,
+        
+        -- Datos del tipo de documento
+        td.nombre as tipo_documento,
+        td.descripcion as descripcion_tipo_documento,
+        
+        -- Datos del expediente
+        e.numero_expediente,
+        e.fecha_apertura,
+        
+        -- Datos del paciente ✅ CORREGIDO: usar estructura correcta
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as nombre_paciente,
+        p.fecha_nacimiento,
+        p.sexo,
+        EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
+        
+        -- Datos del médico creador ✅ CORREGIDO: pm_p.nombre en lugar de pm.nombres
+        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno, ' ', COALESCE(pm_p.apellido_materno, '')) as medico_creador,
+        pm.especialidad as especialidad_medico,
+        pm.numero_cedula as cedula_medico,
+        
+        -- Datos del internamiento (si aplica)
+        i.id_internamiento,
+        i.fecha_ingreso,
+        i.fecha_egreso,
+        i.motivo_ingreso,
+        i.diagnostico_ingreso,
+        s.nombre as servicio,
+        
+        -- Datos de la cama (si aplica) ✅ CORREGIDO: estructura de cama
+        c.numero as numero_cama,
+        c.area as area_cama,
+        c.subarea as subarea_cama
+        
+      FROM documento_clinico dc
+      JOIN expediente e ON dc.id_expediente = e.id_expediente
+      JOIN paciente pac ON e.id_paciente = pac.id_paciente
+      JOIN persona p ON pac.id_persona = p.id_persona
+      JOIN tipo_documento td ON dc.id_tipo_documento = td.id_tipo_documento
+      LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
+      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
+      LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
+      LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
+      LEFT JOIN cama c ON i.id_cama = c.id_cama
+      WHERE dc.id_expediente = $1
+    `;
+        const params = [expedienteId];
+        let paramCounter = 2;
+        // Aplicar filtros
+        if (estado && estado !== 'todos') {
+            query += ` AND dc.estado = $${paramCounter}`;
+            params.push(estado);
+            paramCounter++;
+        }
+        if (fecha_inicio) {
+            query += ` AND DATE(dc.fecha_elaboracion) >= $${paramCounter}`;
+            params.push(fecha_inicio);
+            paramCounter++;
+        }
+        if (fecha_fin) {
+            query += ` AND DATE(dc.fecha_elaboracion) <= $${paramCounter}`;
+            params.push(fecha_fin);
+            paramCounter++;
+        }
+        if (tipo_documento) {
+            query += ` AND td.nombre ILIKE $${paramCounter}`;
+            params.push(`%${tipo_documento}%`);
+            paramCounter++;
+        }
+        // Ordenar por fecha más reciente
+        query += ` ORDER BY dc.fecha_elaboracion DESC`;
+        // Paginación
+        query += ` LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+        params.push(limit, offset);
+        const result = await database_1.default.query(query, params);
+        // Consulta para contar total de documentos
+        let countQuery = `
+      SELECT COUNT(*) as total
+      FROM documento_clinico dc
+      JOIN tipo_documento td ON dc.id_tipo_documento = td.id_tipo_documento
+      WHERE dc.id_expediente = $1
+    `;
+        const countParams = [expedienteId];
+        let countParamCounter = 2;
+        if (estado && estado !== 'todos') {
+            countQuery += ` AND dc.estado = $${countParamCounter}`;
+            countParams.push(estado);
+            countParamCounter++;
+        }
+        if (fecha_inicio) {
+            countQuery += ` AND DATE(dc.fecha_elaboracion) >= $${countParamCounter}`;
+            countParams.push(fecha_inicio);
+            countParamCounter++;
+        }
+        if (fecha_fin) {
+            countQuery += ` AND DATE(dc.fecha_elaboracion) <= $${countParamCounter}`;
+            countParams.push(fecha_fin);
+            countParamCounter++;
+        }
+        if (tipo_documento) {
+            countQuery += ` AND td.nombre ILIKE $${countParamCounter}`;
+            countParams.push(`%${tipo_documento}%`);
+        }
+        const countResult = await database_1.default.query(countQuery, countParams);
+        const total = parseInt(countResult.rows[0].total);
+        const response = {
+            success: true,
+            message: 'Documentos obtenidos exitosamente',
+            data: result.rows,
+            pagination: {
+                page: Math.floor(Number(offset) / Number(limit)) + 1,
+                limit: Number(limit),
+                total: total,
+                totalPages: Math.ceil(total / Number(limit)),
+                hasNext: Number(offset) + Number(limit) < total,
+                hasPrev: Number(offset) > 0
+            }
+        };
+        res.status(200).json(response);
+    }
+    catch (error) {
+        console.error('Error al obtener documentos del expediente:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al obtener documentos',
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+exports.getDocumentosByExpediente = getDocumentosByExpediente;
 // ==========================================
 // CREAR NUEVO DOCUMENTO CLÍNICO
 // ==========================================
@@ -390,48 +533,6 @@ const deleteDocumentoClinico = async (req, res) => {
     }
 };
 exports.deleteDocumentoClinico = deleteDocumentoClinico;
-// ==========================================
-// OBTENER DOCUMENTOS POR EXPEDIENTE
-// ==========================================
-const getDocumentosByExpediente = async (req, res) => {
-    try {
-        const { id_expediente } = req.params;
-        // Validar que el ID sea un número
-        if (!id_expediente || isNaN(parseInt(id_expediente))) {
-            return res.status(400).json({
-                success: false,
-                message: 'El ID del expediente debe ser un número válido'
-            });
-        }
-        const query = `
-      SELECT 
-        dc.*,
-        td.nombre as tipo_documento_nombre,
-        pm.nombres || ' ' || pm.apellido_paterno as personal_creador_nombre,
-        pm.especialidad
-      FROM documento_clinico dc
-      LEFT JOIN tipo_documento td ON dc.id_tipo_documento = td.id_tipo_documento
-      LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
-      WHERE dc.id_expediente = $1 AND dc.estado != 'Anulado'
-      ORDER BY dc.fecha_elaboracion DESC
-    `;
-        const response = await database_1.default.query(query, [id_expediente]);
-        return res.status(200).json({
-            success: true,
-            message: 'Documentos del expediente obtenidos correctamente',
-            data: response.rows
-        });
-    }
-    catch (error) {
-        console.error('Error al obtener documentos del expediente:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al obtener documentos del expediente',
-            error: process.env.NODE_ENV === 'development' ? error : {}
-        });
-    }
-};
-exports.getDocumentosByExpediente = getDocumentosByExpediente;
 // ==========================================
 // OBTENER ESTADÍSTICAS DE DOCUMENTOS CLÍNICOS
 // ==========================================

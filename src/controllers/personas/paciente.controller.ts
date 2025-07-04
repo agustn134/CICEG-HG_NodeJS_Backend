@@ -119,19 +119,118 @@ export const getPacientes = async (req: Request, res: Response): Promise<Respons
 // ==========================================
 // OBTENER PACIENTE POR ID
 // ==========================================
-export const getPacienteById = async (req: Request, res: Response): Promise<Response> => {
+// export const getPacienteById = async (req: Request, res: Response): Promise<Response> => {
+//   try {
+//     const { id } = req.params;
+    
+//     if (!id || isNaN(parseInt(id))) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'El ID debe ser un número válido'
+//       });
+//     }
+    
+//     const query = `
+//       SELECT 
+//         pac.id_paciente,
+//         pac.alergias,
+//         pac.transfusiones,
+//         pac.detalles_transfusiones,
+//         pac.familiar_responsable,
+//         pac.parentesco_familiar,
+//         pac.telefono_familiar,
+//         pac.ocupacion,
+//         pac.escolaridad,
+//         pac.lugar_nacimiento,
+//         p.id_persona,
+//         p.nombre,
+//         p.apellido_paterno,
+//         p.apellido_materno,
+//         p.fecha_nacimiento,
+//         p.sexo,
+//         p.curp,
+//         p.telefono,
+//         p.correo_electronico,
+//         p.domicilio,
+//         p.estado_civil,
+//         p.religion,
+//         ts.nombre as tipo_sangre,
+//         DATE_PART('year', AGE(p.fecha_nacimiento)) as edad,
+//         COUNT(e.id_expediente) as total_expedientes,
+//         COUNT(CASE WHEN e.estado = 'Activo' THEN 1 END) as expedientes_activos,
+//         COUNT(i.id_internamiento) as total_internamientos,
+//         COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos
+//       FROM paciente pac
+//       JOIN persona p ON pac.id_persona = p.id_persona
+//       LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
+//       LEFT JOIN expediente e ON pac.id_paciente = e.id_paciente
+//       LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
+//       WHERE pac.id_paciente = $1
+//       GROUP BY pac.id_paciente, pac.alergias, pac.transfusiones, pac.detalles_transfusiones,
+//                pac.familiar_responsable, pac.parentesco_familiar, pac.telefono_familiar,
+//                pac.ocupacion, pac.escolaridad, pac.lugar_nacimiento, p.id_persona,
+//                p.nombre, p.apellido_paterno, p.apellido_materno, p.fecha_nacimiento,
+//                p.sexo, p.curp, p.telefono, p.correo_electronico, p.domicilio,
+//                p.estado_civil, p.religion, ts.nombre
+//     `;
+    
+//     const response: QueryResult = await pool.query(query, [id]);
+    
+//     if (response.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Paciente no encontrado'
+//       });
+//     }
+    
+//     // Obtener expedientes del paciente
+//     const expedientesQuery = `
+//       SELECT 
+//         e.id_expediente,
+//         e.numero_expediente,
+//         e.estado,
+//         e.fecha_creacion,
+//         COUNT(dc.id_documento) as total_documentos,
+//         COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos
+//       FROM expediente e
+//       LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
+//       LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
+//       WHERE e.id_paciente = $1
+//       GROUP BY e.id_expediente, e.numero_expediente, e.estado, e.fecha_creacion
+//       ORDER BY e.fecha_creacion DESC
+//     `;
+    
+//     const expedientesResponse: QueryResult = await pool.query(expedientesQuery, [id]);
+    
+//     const pacienteData = response.rows[0];
+//     pacienteData.expedientes = expedientesResponse.rows;
+    
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Paciente encontrado correctamente',
+//       data: pacienteData
+//     });
+//   } catch (error) {
+//     console.error('Error al obtener paciente por ID:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Error interno del servidor al obtener paciente',
+//       error: process.env.NODE_ENV === 'development' ? error : {}
+//     });
+//   }
+// };
+
+// ❌ CONSULTA INCORRECTA (línea ~189):
+// SELECT e.fecha_creacion  <-- ESTA COLUMNA NO EXISTE
+
+// ✅ CONSULTA CORREGIDA:
+export const getPacienteById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     
-    if (!id || isNaN(parseInt(id))) {
-      return res.status(400).json({
-        success: false,
-        message: 'El ID debe ser un número válido'
-      });
-    }
-    
     const query = `
       SELECT 
+        -- Datos del paciente
         pac.id_paciente,
         pac.alergias,
         pac.transfusiones,
@@ -142,6 +241,8 @@ export const getPacienteById = async (req: Request, res: Response): Promise<Resp
         pac.ocupacion,
         pac.escolaridad,
         pac.lugar_nacimiento,
+        
+        -- Datos de la persona
         p.id_persona,
         p.nombre,
         p.apellido_paterno,
@@ -152,70 +253,109 @@ export const getPacienteById = async (req: Request, res: Response): Promise<Resp
         p.telefono,
         p.correo_electronico,
         p.domicilio,
+
         p.estado_civil,
         p.religion,
+        
+        -- Datos del tipo de sangre
         ts.nombre as tipo_sangre,
-        DATE_PART('year', AGE(p.fecha_nacimiento)) as edad,
-        COUNT(e.id_expediente) as total_expedientes,
-        COUNT(CASE WHEN e.estado = 'Activo' THEN 1 END) as expedientes_activos,
-        COUNT(i.id_internamiento) as total_internamientos,
-        COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos
+        
+        -- Calcular edad
+        EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
+        
+        -- Datos del expediente (si existe)
+        e.id_expediente,
+        e.numero_expediente,
+        e.fecha_apertura,  -- ✅ CORREGIDO: era fecha_creacion
+        e.estado as estado_expediente,
+        e.notas_administrativas,
+        
+        -- Estadísticas del expediente
+        (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente) as total_documentos,
+        (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente AND dc.estado = 'Activo') as documentos_activos,
+        (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente) as total_internamientos,
+        (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente AND i.fecha_egreso IS NULL) as internamientos_activos
+        
       FROM paciente pac
       JOIN persona p ON pac.id_persona = p.id_persona
       LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
       LEFT JOIN expediente e ON pac.id_paciente = e.id_paciente
-      LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
       WHERE pac.id_paciente = $1
-      GROUP BY pac.id_paciente, pac.alergias, pac.transfusiones, pac.detalles_transfusiones,
-               pac.familiar_responsable, pac.parentesco_familiar, pac.telefono_familiar,
-               pac.ocupacion, pac.escolaridad, pac.lugar_nacimiento, p.id_persona,
-               p.nombre, p.apellido_paterno, p.apellido_materno, p.fecha_nacimiento,
-               p.sexo, p.curp, p.telefono, p.correo_electronico, p.domicilio,
-               p.estado_civil, p.religion, ts.nombre
     `;
     
-    const response: QueryResult = await pool.query(query, [id]);
+    const result = await pool.query(query, [id]);
     
-    if (response.rows.length === 0) {
-      return res.status(404).json({
+    if (result.rows.length === 0) {
+      res.status(404).json({
         success: false,
         message: 'Paciente no encontrado'
       });
+      return;
     }
     
-    // Obtener expedientes del paciente
-    const expedientesQuery = `
-      SELECT 
-        e.id_expediente,
-        e.numero_expediente,
-        e.estado,
-        e.fecha_creacion,
-        COUNT(dc.id_documento) as total_documentos,
-        COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos
-      FROM expediente e
-      LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
-      LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
-      WHERE e.id_paciente = $1
-      GROUP BY e.id_expediente, e.numero_expediente, e.estado, e.fecha_creacion
-      ORDER BY e.fecha_creacion DESC
-    `;
+    // Estructurar la respuesta
+    const pacienteData = result.rows[0];
     
-    const expedientesResponse: QueryResult = await pool.query(expedientesQuery, [id]);
-    
-    const pacienteData = response.rows[0];
-    pacienteData.expedientes = expedientesResponse.rows;
-    
-    return res.status(200).json({
+    const response = {
       success: true,
-      message: 'Paciente encontrado correctamente',
-      data: pacienteData
-    });
+      message: 'Paciente obtenido exitosamente',
+      data: {
+        // Datos del paciente
+        id_paciente: pacienteData.id_paciente,
+        alergias: pacienteData.alergias,
+        transfusiones: pacienteData.transfusiones,
+        detalles_transfusiones: pacienteData.detalles_transfusiones,
+        familiar_responsable: pacienteData.familiar_responsable,
+        parentesco_familiar: pacienteData.parentesco_familiar,
+        telefono_familiar: pacienteData.telefono_familiar,
+        ocupacion: pacienteData.ocupacion,
+        escolaridad: pacienteData.escolaridad,
+        lugar_nacimiento: pacienteData.lugar_nacimiento,
+        
+        // Datos de la persona
+        persona: {
+          id_persona: pacienteData.id_persona,
+          nombre: pacienteData.nombre,
+          apellido_paterno: pacienteData.apellido_paterno,
+          apellido_materno: pacienteData.apellido_materno,
+          fecha_nacimiento: pacienteData.fecha_nacimiento,
+          sexo: pacienteData.sexo,
+          curp: pacienteData.curp,
+          telefono: pacienteData.telefono,
+          correo_electronico: pacienteData.correo_electronico,
+          domicilio: pacienteData.domicilio,
+          ciudad: pacienteData.ciudad,
+          estado: pacienteData.estado,
+          codigo_postal: pacienteData.codigo_postal,
+          estado_civil: pacienteData.estado_civil,
+          religion: pacienteData.religion,
+          tipo_sangre: pacienteData.tipo_sangre,
+          edad: pacienteData.edad
+        },
+        
+        // Datos del expediente (si existe)
+        expediente: pacienteData.id_expediente ? {
+          id_expediente: pacienteData.id_expediente,
+          numero_expediente: pacienteData.numero_expediente,
+          fecha_apertura: pacienteData.fecha_apertura,
+          estado: pacienteData.estado_expediente,
+          notas_administrativas: pacienteData.notas_administrativas,
+          total_documentos: pacienteData.total_documentos,
+          documentos_activos: pacienteData.documentos_activos,
+          total_internamientos: pacienteData.total_internamientos,
+          internamientos_activos: pacienteData.internamientos_activos
+        } : null
+      }
+    };
+    
+    res.status(200).json(response);
+    
   } catch (error) {
     console.error('Error al obtener paciente por ID:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: 'Error interno del servidor al obtener paciente',
-      error: process.env.NODE_ENV === 'development' ? error : {}
+      error: process.env.NODE_ENV === 'development' ? error : undefined
     });
   }
 };
@@ -546,47 +686,76 @@ export const getEstadisticasPacientes = async (req: Request, res: Response): Pro
     // Estadísticas generales
     const resumenQuery = `
       SELECT 
-        COUNT(*) as total_pacientes,
+        COUNT(DISTINCT pac.id_paciente) as total_pacientes,
         COUNT(CASE WHEN p.sexo = 'M' THEN 1 END) as pacientes_masculinos,
         COUNT(CASE WHEN p.sexo = 'F' THEN 1 END) as pacientes_femeninos,
-        COUNT(CASE WHEN pac.transfusiones = true THEN 1 END) as con_transfusiones,
+        COUNT(CASE WHEN pac.transfusiones = 'true' OR pac.transfusiones = 'Si' OR (pac.transfusiones IS NOT NULL AND pac.transfusiones != '' AND pac.transfusiones != 'false' AND pac.transfusiones != 'No') THEN 1 END) as con_transfusiones,
         COUNT(CASE WHEN pac.alergias IS NOT NULL AND pac.alergias != '' THEN 1 END) as con_alergias,
-        ROUND(AVG(DATE_PART('year', AGE(p.fecha_nacimiento))), 2) as edad_promedio
+ROUND(AVG(DATE_PART('year', AGE(p.fecha_nacimiento)))::numeric, 2) as edad_promedio,
+        COUNT(DISTINCT dc.id_documento) as consultas_mes_actual,
+        COUNT(DISTINCT pac.id_paciente) as pacientes_activos
       FROM paciente pac
       JOIN persona p ON pac.id_persona = p.id_persona
+      LEFT JOIN expediente e ON pac.id_paciente = e.id_paciente
+      LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente AND dc.fecha_elaboracion >= CURRENT_DATE - INTERVAL '30 days'
     `;
     
     const resumenResponse: QueryResult = await pool.query(resumenQuery);
     
     // Distribución por grupos de edad
-    const edadQuery = `
-      SELECT 
-        CASE 
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) < 18 THEN 'Menores (0-17)'
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 18 AND 39 THEN 'Adultos Jóvenes (18-39)'
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 40 AND 59 THEN 'Adultos (40-59)'
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) >= 60 THEN 'Adultos Mayores (60+)'
-        END as grupo_edad,
-        COUNT(*) as total_pacientes,
-        COUNT(CASE WHEN p.sexo = 'M' THEN 1 END) as masculinos,
-        COUNT(CASE WHEN p.sexo = 'F' THEN 1 END) as femeninos
-      FROM paciente pac
-      JOIN persona p ON pac.id_persona = p.id_persona
-      GROUP BY 
-        CASE 
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) < 18 THEN 'Menores (0-17)'
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 18 AND 39 THEN 'Adultos Jóvenes (18-39)'
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 40 AND 59 THEN 'Adultos (40-59)'
-          WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) >= 60 THEN 'Adultos Mayores (60+)'
-        END
-      ORDER BY 
-        CASE 
-          WHEN grupo_edad = 'Menores (0-17)' THEN 1
-          WHEN grupo_edad = 'Adultos Jóvenes (18-39)' THEN 2
-          WHEN grupo_edad = 'Adultos (40-59)' THEN 3
-          WHEN grupo_edad = 'Adultos Mayores (60+)' THEN 4
-        END
-    `;
+    // const edadQuery = `
+    //   SELECT 
+    //     CASE 
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) < 18 THEN 'Menores (0-17)'
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 18 AND 39 THEN 'Adultos Jóvenes (18-39)'
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 40 AND 59 THEN 'Adultos (40-59)'
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) >= 60 THEN 'Adultos Mayores (60+)'
+    //     END as grupo_edad,
+    //     COUNT(*) as total_pacientes,
+    //     COUNT(CASE WHEN p.sexo = 'M' THEN 1 END) as masculinos,
+    //     COUNT(CASE WHEN p.sexo = 'F' THEN 1 END) as femeninos
+    //   FROM paciente pac
+    //   JOIN persona p ON pac.id_persona = p.id_persona
+    //   GROUP BY 
+    //     CASE 
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) < 18 THEN 'Menores (0-17)'
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 18 AND 39 THEN 'Adultos Jóvenes (18-39)'
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 40 AND 59 THEN 'Adultos (40-59)'
+    //       WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) >= 60 THEN 'Adultos Mayores (60+)'
+    //     END
+    //   ORDER BY 
+    //     CASE 
+    //       WHEN grupo_edad = 'Menores (0-17)' THEN 1
+    //       WHEN grupo_edad = 'Adultos Jóvenes (18-39)' THEN 2
+    //       WHEN grupo_edad = 'Adultos (40-59)' THEN 3
+    //       WHEN grupo_edad = 'Adultos Mayores (60+)' THEN 4
+    //     END
+    // `;
+    // Distribución por grupos de edad
+const edadQuery = `
+  SELECT 
+    CASE 
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) < 18 THEN 'Menores (0-17)'
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 18 AND 39 THEN 'Adultos Jóvenes (18-39)'
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 40 AND 59 THEN 'Adultos (40-59)'
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) >= 60 THEN 'Adultos Mayores (60+)'
+    END as grupo_edad,
+    COUNT(*) as total_pacientes,
+    COUNT(CASE WHEN p.sexo = 'M' THEN 1 END) as masculinos,
+    COUNT(CASE WHEN p.sexo = 'F' THEN 1 END) as femeninos
+  FROM paciente pac
+  JOIN persona p ON pac.id_persona = p.id_persona
+  GROUP BY 
+    CASE 
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) < 18 THEN 'Menores (0-17)'
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 18 AND 39 THEN 'Adultos Jóvenes (18-39)'
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) BETWEEN 40 AND 59 THEN 'Adultos (40-59)'
+      WHEN DATE_PART('year', AGE(p.fecha_nacimiento)) >= 60 THEN 'Adultos Mayores (60+)'
+    END
+  ORDER BY 
+    MIN(DATE_PART('year', AGE(p.fecha_nacimiento)))
+`;
+
     
     const edadResponse: QueryResult = await pool.query(edadQuery);
     

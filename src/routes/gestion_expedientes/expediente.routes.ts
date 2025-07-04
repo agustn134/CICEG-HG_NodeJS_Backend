@@ -1,23 +1,3 @@
-// // src/routes/gestion_expedientes/expediente.routes.ts
-// import { Router } from "express";
-// import {
-//   getExpedientes,
-//   getExpedienteById,
-//   createExpediente,
-//   updateExpediente,
-//   deleteExpediente
-// } from "../../controllers/gestion_expedientes/expediente.controller";
-
-// const router = Router();
-
-// router.get("/", getExpedientes);
-// router.get("/:id", getExpedienteById);
-// router.post("/", createExpediente);
-// router.put("/:id", updateExpediente);
-// router.delete("/:id", deleteExpediente);
-
-// export default router;
-
 // src/routes/gestion_expedientes/expediente.routes.ts
 import { Router } from "express";
 import {
@@ -27,6 +7,7 @@ import {
   updateExpediente,
   deleteExpediente,
   getExpedientesByPaciente,
+  getExpedienteByPacienteId,  // ✅ AGREGAR ESTA IMPORTACIÓN
   buscarExpedientes,
   getDashboardExpedientes,
   validarAccesoExpediente,
@@ -40,57 +21,68 @@ import {
 const router = Router();
 
 // ==========================================
+// RUTAS ESPECIALES (DEBEN IR ANTES QUE /:id)
+// ==========================================
+
+// GET /api/gestion-expedientes/expedientes/buscar - Buscar expedientes (autocomplete)
+router.get("/buscar", buscarExpedientes);
+
+// GET /api/gestion-expedientes/expedientes/dashboard - Obtener dashboard de expedientes
+router.get("/dashboard", getDashboardExpedientes);
+
+// ==========================================
+// RUTAS POR PACIENTE (DEBEN IR ANTES QUE /:id)
+// ==========================================
+
+// ✅ RUTA NUEVA: GET /api/gestion-expedientes/expedientes/paciente/:pacienteId/principal
+router.get("/paciente/:pacienteId/principal", getExpedienteByPacienteId);
+
+// GET /api/gestion-expedientes/expedientes/paciente/:id_paciente - Obtener expedientes de un paciente
+router.get("/paciente/:id_paciente", getExpedientesByPaciente);
+
+// ==========================================
 // RUTAS BÁSICAS CRUD
 // ==========================================
 
-// GET /api/expedientes - Obtener todos los expedientes con filtros
+// GET /api/gestion-expedientes/expedientes - Obtener todos los expedientes con filtros
 router.get("/", getExpedientes);
 
-// GET /api/expedientes/buscar - Buscar expedientes (autocomplete)
-router.get("/buscar", buscarExpedientes);
-
-// GET /api/expedientes/dashboard - Obtener dashboard de expedientes
-router.get("/dashboard", getDashboardExpedientes);
-
-// GET /api/expedientes/:id - Obtener expediente por ID
-router.get("/:id", getExpedienteById);
-
-// POST /api/expedientes - Crear nuevo expediente
+// POST /api/gestion-expedientes/expedientes - Crear nuevo expediente
 router.post("/", createExpediente);
 
-// PUT /api/expedientes/:id - Actualizar expediente
-router.put("/:id", updateExpediente);
-
-// DELETE /api/expedientes/:id - Eliminar expediente (soft delete)
-router.delete("/:id", deleteExpediente);
-
 // ==========================================
-// RUTAS ESPECÍFICAS POR EXPEDIENTE
+// RUTAS ESPECÍFICAS POR EXPEDIENTE (DEBEN IR ANTES QUE /:id)
 // ==========================================
 
-// GET /api/expedientes/:id/auditoria - Obtener historial de auditoría
+// GET /api/gestion-expedientes/expedientes/:id/auditoria - Obtener historial de auditoría
 router.get("/:id/auditoria", getAuditoriaExpediente);
 
-// GET /api/expedientes/:id/alertas - Obtener alertas del expediente
+// GET /api/gestion-expedientes/expedientes/:id/alertas - Obtener alertas del expediente
 router.get("/:id/alertas", getAlertasExpediente);
 
-// PUT /api/expedientes/:id/alertas/:id_alerta - Actualizar alerta específica
+// PUT /api/gestion-expedientes/expedientes/:id/alertas/:id_alerta - Actualizar alerta específica
 router.put("/:id/alertas/:id_alerta", updateAlertaExpediente);
 
-// POST /api/expedientes/:id/validar-acceso - Validar acceso al expediente (reingreso)
+// POST /api/gestion-expedientes/expedientes/:id/validar-acceso - Validar acceso al expediente (reingreso)
 router.post("/:id/validar-acceso", validarAccesoExpediente);
 
-// POST /api/expedientes/:id/validar-reingreso - Completar validación de reingreso
+// POST /api/gestion-expedientes/expedientes/:id/validar-reingreso - Completar validación de reingreso
 router.post("/:id/validar-reingreso", validarReingresoExpediente);
 
-// GET /api/expedientes/:id/reporte - Generar reporte del expediente
+// GET /api/gestion-expedientes/expedientes/:id/reporte - Generar reporte del expediente
 router.get("/:id/reporte", generarReporteExpediente);
 
 // ==========================================
-// RUTAS POR PACIENTE
+// RUTAS BÁSICAS CRUD POR ID (DEBEN IR AL FINAL)
 // ==========================================
 
-// GET /api/expedientes/paciente/:id_paciente - Obtener expedientes de un paciente
-router.get("/paciente/:id_paciente", getExpedientesByPaciente);
+// GET /api/gestion-expedientes/expedientes/:id - Obtener expediente por ID
+router.get("/:id", getExpedienteById);
+
+// PUT /api/gestion-expedientes/expedientes/:id - Actualizar expediente
+router.put("/:id", updateExpediente);
+
+// DELETE /api/gestion-expedientes/expedientes/:id - Eliminar expediente (soft delete)
+router.delete("/:id", deleteExpediente);
 
 export default router;
