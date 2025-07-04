@@ -3,7 +3,7 @@ import { Router } from "express";
 import {
   getSignosVitales,
   getSignosVitalesById,
-  getSignosVitalesByPacienteId,  // ✅ IMPORTAR NUEVA FUNCIÓN
+  getSignosVitalesByPacienteId,
   createSignosVitales,
   updateSignosVitales,
   deleteSignosVitales,
@@ -31,6 +31,13 @@ router.get("/expediente/:id_expediente/historial", getHistorialSignosVitales);
 router.get("/expediente/:id_expediente/grafica", getGraficaSignosVitales);
 
 // ==========================================
+// RUTAS POR PACIENTE (DEBEN IR ANTES QUE /:id)
+// ==========================================
+
+// ✅ RUTA NUEVA: GET /api/gestion-expedientes/signos-vitales/paciente/:pacienteId
+router.get("/paciente/:pacienteId", getSignosVitalesByPacienteId);
+
+// ==========================================
 // RUTAS BÁSICAS CRUD
 // ==========================================
 
@@ -39,16 +46,17 @@ router.get("/expediente/:id_expediente/grafica", getGraficaSignosVitales);
 // Query params: id_expediente, id_internamiento, fecha_inicio, fecha_fin, incluir_anormales, limit, offset
 router.get("/", getSignosVitales);
 
-// GET /api/gestion-expedientes/signos-vitales/:id
-// Obtener signos vitales por ID específico
-router.get("/:id", getSignosVitalesById);
-
-router.get('/paciente/:pacienteId', getSignosVitalesByPacienteId);
-
-
 // POST /api/gestion-expedientes/signos-vitales
 // Crear nuevos signos vitales
 router.post("/", createSignosVitales);
+
+// ==========================================
+// RUTAS POR ID (DEBEN IR AL FINAL)
+// ==========================================
+
+// GET /api/gestion-expedientes/signos-vitales/:id
+// Obtener signos vitales por ID específico
+router.get("/:id", getSignosVitalesById);
 
 // PUT /api/gestion-expedientes/signos-vitales/:id
 // Actualizar signos vitales existentes
@@ -57,7 +65,5 @@ router.put("/:id", updateSignosVitales);
 // DELETE /api/gestion-expedientes/signos-vitales/:id
 // Eliminar (anular) signos vitales
 router.delete("/:id", deleteSignosVitales);
-
-
 
 export default router;

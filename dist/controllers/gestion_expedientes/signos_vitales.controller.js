@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGraficaSignosVitales = exports.getHistorialSignosVitales = exports.getUltimosSignosVitalesPaciente = exports.deleteSignosVitales = exports.updateSignosVitales = exports.createSignosVitales = exports.getSignosVitalesByPacienteId = exports.getSignosVitalesById = exports.getSignosVitales = void 0;
+exports.getSignosVitalesByPacienteId = exports.getGraficaSignosVitales = exports.getHistorialSignosVitales = exports.getUltimosSignosVitalesPaciente = exports.deleteSignosVitales = exports.updateSignosVitales = exports.createSignosVitales = exports.getSignosVitalesById = exports.getSignosVitales = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 // ==========================================
 // OBTENER TODOS LOS SIGNOS VITALES
@@ -263,89 +263,6 @@ const getSignosVitalesById = async (req, res) => {
     }
 };
 exports.getSignosVitalesById = getSignosVitalesById;
-// ==========================================
-// CORRECCIÓN 4: signos_vitales.controller.ts
-// Archivo: src/controllers/gestion_expedientes/signos_vitales.controller.ts
-// ==========================================
-// 🔍 AGREGAR esta función que está faltando:
-// ✅ FUNCIÓN NUEVA: getSignosVitalesByPacienteId
-const getSignosVitalesByPacienteId = async (req, res) => {
-    try {
-        const { pacienteId } = req.params;
-        const { limit = 10, offset = 0 } = req.query;
-        const query = `
-      SELECT 
-        sv.id_signos_vitales,
-        sv.fecha_toma,
-        sv.temperatura,
-        sv.presion_arterial_sistolica,
-        sv.presion_arterial_diastolica,
-        sv.frecuencia_cardiaca,
-        sv.frecuencia_respiratoria,
-        sv.saturacion_oxigeno,
-        sv.glucosa,
-        sv.peso,
-        sv.talla,
-        sv.imc,
-        sv.observaciones,
-        
-        -- Datos del expediente
-        e.numero_expediente,
-        
-        -- Datos del médico que registró
-        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_registra,
-        pm.especialidad as especialidad_medico,
-        
-        -- Datos del documento
-        dc.id_documento,
-        dc.fecha_elaboracion as fecha_documento
-        
-      FROM signos_vitales sv
-      JOIN expediente e ON sv.id_expediente = e.id_expediente
-      JOIN paciente pac ON e.id_paciente = pac.id_paciente
-      LEFT JOIN personal_medico pm ON sv.id_medico_registra = pm.id_personal_medico
-      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
-      LEFT JOIN documento_clinico dc ON sv.id_documento = dc.id_documento
-      WHERE pac.id_paciente = $1
-      ORDER BY sv.fecha_toma DESC
-      LIMIT $2 OFFSET $3
-    `;
-        const result = await database_1.default.query(query, [pacienteId, limit, offset]);
-        // Consulta para contar total
-        const countQuery = `
-      SELECT COUNT(*) as total
-      FROM signos_vitales sv
-      JOIN expediente e ON sv.id_expediente = e.id_expediente
-      JOIN paciente pac ON e.id_paciente = pac.id_paciente
-      WHERE pac.id_paciente = $1
-    `;
-        const countResult = await database_1.default.query(countQuery, [pacienteId]);
-        const total = parseInt(countResult.rows[0].total);
-        const response = {
-            success: true,
-            message: 'Signos vitales obtenidos exitosamente',
-            data: result.rows,
-            pagination: {
-                page: Math.floor(Number(offset) / Number(limit)) + 1,
-                limit: Number(limit),
-                total: total,
-                totalPages: Math.ceil(total / Number(limit)),
-                hasNext: Number(offset) + Number(limit) < total,
-                hasPrev: Number(offset) > 0
-            }
-        };
-        res.status(200).json(response);
-    }
-    catch (error) {
-        console.error('Error al obtener signos vitales por paciente ID:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al obtener signos vitales',
-            error: process.env.NODE_ENV === 'development' ? error : undefined
-        });
-    }
-};
-exports.getSignosVitalesByPacienteId = getSignosVitalesByPacienteId;
 // ==========================================
 // CREAR SIGNOS VITALES
 // ==========================================
@@ -1274,3 +1191,104 @@ const getGraficaSignosVitales = async (req, res) => {
     }
 };
 exports.getGraficaSignosVitales = getGraficaSignosVitales;
+const getSignosVitalesByPacienteId = async (req, res) => {
+    try {
+        const { pacienteId } = req.params;
+        const { limit = 10, offset = 0 } = req.query;
+        // ✅ CONSULTA CORREGIDA: Relación correcta a través de documento_clinico
+        const query = `
+      SELECT 
+        sv.id_signos_vitales,
+        sv.fecha_toma,
+        sv.temperatura,
+        sv.presion_arterial_sistolica,
+        sv.presion_arterial_diastolica,
+        sv.frecuencia_cardiaca,
+        sv.frecuencia_respiratoria,
+        sv.saturacion_oxigeno,
+        sv.glucosa,
+        sv.peso,
+        sv.talla,
+        sv.imc,
+        sv.observaciones,
+        
+        -- Datos del expediente
+        e.numero_expediente,
+        
+        -- Datos del médico que registró ✅ CORREGIDO: pm_p.nombre en lugar de pm.nombres
+        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_registra,
+        pm.especialidad as especialidad_medico,
+        
+        -- Datos del documento
+        dc.id_documento,
+        dc.fecha_elaboracion as fecha_documento,
+        
+        -- Indicadores de valores anormales
+        CASE 
+          WHEN sv.temperatura < 36 OR sv.temperatura > 37.5 THEN true
+          ELSE false
+        END as temperatura_anormal,
+        CASE 
+          WHEN sv.presion_arterial_sistolica > 140 OR sv.presion_arterial_diastolica > 90 THEN true
+          WHEN sv.presion_arterial_sistolica < 90 OR sv.presion_arterial_diastolica < 60 THEN true
+          ELSE false
+        END as presion_anormal,
+        CASE 
+          WHEN sv.frecuencia_cardiaca < 60 OR sv.frecuencia_cardiaca > 100 THEN true
+          ELSE false
+        END as fc_anormal,
+        CASE 
+          WHEN sv.saturacion_oxigeno < 95 THEN true
+          ELSE false
+        END as saturacion_anormal
+        
+      FROM signos_vitales sv
+      -- ✅ RELACIÓN CORREGIDA: a través de documento_clinico, no directamente
+      JOIN documento_clinico dc ON sv.id_documento = dc.id_documento
+      JOIN expediente e ON dc.id_expediente = e.id_expediente
+      JOIN paciente pac ON e.id_paciente = pac.id_paciente
+      LEFT JOIN personal_medico pm ON dc.id_personal_creador = pm.id_personal_medico
+      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
+      WHERE pac.id_paciente = $1
+        AND dc.estado = 'Activo'
+      ORDER BY sv.fecha_toma DESC
+      LIMIT $2 OFFSET $3
+    `;
+        const result = await database_1.default.query(query, [pacienteId, limit, offset]);
+        // Consulta para contar total
+        const countQuery = `
+      SELECT COUNT(*) as total
+      FROM signos_vitales sv
+      JOIN documento_clinico dc ON sv.id_documento = dc.id_documento
+      JOIN expediente e ON dc.id_expediente = e.id_expediente
+      JOIN paciente pac ON e.id_paciente = pac.id_paciente
+      WHERE pac.id_paciente = $1
+        AND dc.estado = 'Activo'
+    `;
+        const countResult = await database_1.default.query(countQuery, [pacienteId]);
+        const total = parseInt(countResult.rows[0].total);
+        const response = {
+            success: true,
+            message: 'Signos vitales obtenidos exitosamente',
+            data: result.rows,
+            pagination: {
+                page: Math.floor(Number(offset) / Number(limit)) + 1,
+                limit: Number(limit),
+                total: total,
+                totalPages: Math.ceil(total / Number(limit)),
+                hasNext: Number(offset) + Number(limit) < total,
+                hasPrev: Number(offset) > 0
+            }
+        };
+        res.status(200).json(response);
+    }
+    catch (error) {
+        console.error('Error al obtener signos vitales por paciente ID:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al obtener signos vitales',
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+exports.getSignosVitalesByPacienteId = getSignosVitalesByPacienteId;

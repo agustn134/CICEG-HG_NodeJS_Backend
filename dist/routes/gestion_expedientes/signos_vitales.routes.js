@@ -17,19 +17,26 @@ router.get("/expediente/:id_expediente/historial", signos_vitales_controller_1.g
 // Obtener datos para gráfica de signos vitales
 router.get("/expediente/:id_expediente/grafica", signos_vitales_controller_1.getGraficaSignosVitales);
 // ==========================================
+// RUTAS POR PACIENTE (DEBEN IR ANTES QUE /:id)
+// ==========================================
+// ✅ RUTA NUEVA: GET /api/gestion-expedientes/signos-vitales/paciente/:pacienteId
+router.get("/paciente/:pacienteId", signos_vitales_controller_1.getSignosVitalesByPacienteId);
+// ==========================================
 // RUTAS BÁSICAS CRUD
 // ==========================================
 // GET /api/gestion-expedientes/signos-vitales
 // Obtener todos los signos vitales con filtros y paginación
 // Query params: id_expediente, id_internamiento, fecha_inicio, fecha_fin, incluir_anormales, limit, offset
 router.get("/", signos_vitales_controller_1.getSignosVitales);
-// GET /api/gestion-expedientes/signos-vitales/:id
-// Obtener signos vitales por ID específico
-router.get("/:id", signos_vitales_controller_1.getSignosVitalesById);
-router.get('/paciente/:pacienteId', signos_vitales_controller_1.getSignosVitalesByPacienteId);
 // POST /api/gestion-expedientes/signos-vitales
 // Crear nuevos signos vitales
 router.post("/", signos_vitales_controller_1.createSignosVitales);
+// ==========================================
+// RUTAS POR ID (DEBEN IR AL FINAL)
+// ==========================================
+// GET /api/gestion-expedientes/signos-vitales/:id
+// Obtener signos vitales por ID específico
+router.get("/:id", signos_vitales_controller_1.getSignosVitalesById);
 // PUT /api/gestion-expedientes/signos-vitales/:id
 // Actualizar signos vitales existentes
 router.put("/:id", signos_vitales_controller_1.updateSignosVitales);
