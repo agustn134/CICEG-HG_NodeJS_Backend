@@ -1,25 +1,49 @@
 "use strict";
+// // src/controllers/documentos_clinicos/nota_evolucion.controller.ts
+// import { Request, Response } from 'express';
+// import { QueryResult } from 'pg';
+// import pool from '../../config/database';
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getEstadisticasNotasEvolucion = exports.getNotaEvolucionByDocumento = exports.getNotasEvolucionByExpediente = exports.deleteNotaEvolucion = exports.updateNotaEvolucion = exports.getNotaEvolucionById = exports.getNotasEvolucion = exports.createNotaEvolucion = void 0;
+exports.deleteNotaEvolucion = exports.updateNotaEvolucion = exports.getNotaEvolucionById = exports.getNotasEvolucion = exports.getNotaEvolucionByDocumento = exports.getNotasEvolucionByExpediente = exports.createNotaEvolucion = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 // ==========================================
-// CREAR NUEVA NOTA DE EVOLUCIÓN
+// CREAR NUEVA NOTA DE EVOLUCIÓN - CORREGIDO
 // ==========================================
 const createNotaEvolucion = async (req, res) => {
     try {
-        const { id_documento, subjetivo, objetivo, analisis, plan } = req.body;
+        const requestData = req.body;
+        console.log('🔍 REQUEST BODY:', requestData);
         // Validaciones obligatorias
-        if (!id_documento) {
+        if (!requestData.id_documento) {
             return res.status(400).json({
                 success: false,
                 message: 'El campo id_documento es obligatorio'
             });
         }
+        // Validar campos obligatorios según tu BD
+        const camposObligatorios = [
+            'sintomas_signos',
+            'habitus_exterior',
+            'estado_nutricional',
+            'estudios_laboratorio_gabinete',
+            'evolucion_analisis',
+            'diagnosticos',
+            'plan_estudios_tratamiento',
+            'pronostico'
+        ];
+        for (const campo of camposObligatorios) {
+            if (!requestData[campo]) {
+                return res.status(400).json({
+                    success: false,
+                    message: `El campo ${campo} es obligatorio`
+                });
+            }
+        }
         // Verificar que el documento clínico existe
-        const documentoCheck = await database_1.default.query('SELECT id_documento, estado FROM documento_clinico WHERE id_documento = $1', [id_documento]);
+        const documentoCheck = await database_1.default.query('SELECT id_documento, estado FROM documento_clinico WHERE id_documento = $1', [requestData.id_documento]);
         if (documentoCheck.rows.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -33,28 +57,90 @@ const createNotaEvolucion = async (req, res) => {
             });
         }
         // Verificar que no exista ya una nota de evolución para este documento
-        const notaExistente = await database_1.default.query('SELECT id_nota_evolucion FROM nota_evolucion WHERE id_documento = $1', [id_documento]);
+        const notaExistente = await database_1.default.query('SELECT id_nota_evolucion FROM nota_evolucion WHERE id_documento = $1', [requestData.id_documento]);
         if (notaExistente.rows.length > 0) {
             return res.status(409).json({
                 success: false,
                 message: 'Ya existe una nota de evolución para este documento'
             });
         }
-        // Crear nota de evolución con campos SOAP
+        // Crear nota de evolución con TODOS los campos de tu BD
         const query = `
       INSERT INTO nota_evolucion (
-        id_documento, subjetivo, objetivo, analisis, plan
-      ) VALUES ($1, $2, $3, $4, $5) 
+        id_documento,
+        dias_hospitalizacion,
+        fecha_ultimo_ingreso,
+        temperatura,
+        frecuencia_cardiaca,
+        frecuencia_respiratoria,
+        presion_arterial_sistolica,
+        presion_arterial_diastolica,
+        saturacion_oxigeno,
+        peso_actual,
+        talla_actual,
+        sintomas_signos,
+        habitus_exterior,
+        exploracion_cabeza,
+        exploracion_cuello,
+        exploracion_torax,
+        exploracion_abdomen,
+        exploracion_extremidades,
+        exploracion_columna,
+        exploracion_genitales,
+        exploracion_neurologico,
+        estado_nutricional,
+        estudios_laboratorio_gabinete,
+        evolucion_analisis,
+        diagnosticos,
+        diagnosticos_guias,
+        plan_estudios_tratamiento,
+        interconsultas,
+        pronostico,
+        indicaciones_medicas,
+        observaciones_adicionales
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+      ) 
       RETURNING *
     `;
         const values = [
-            id_documento,
-            subjetivo?.trim() || null,
-            objetivo?.trim() || null,
-            analisis?.trim() || null,
-            plan?.trim() || null
+            requestData.id_documento,
+            requestData.dias_hospitalizacion || null,
+            requestData.fecha_ultimo_ingreso || null,
+            requestData.temperatura || null,
+            requestData.frecuencia_cardiaca || null,
+            requestData.frecuencia_respiratoria || null,
+            requestData.presion_arterial_sistolica || null,
+            requestData.presion_arterial_diastolica || null,
+            requestData.saturacion_oxigeno || null,
+            requestData.peso_actual || null,
+            requestData.talla_actual || null,
+            requestData.sintomas_signos?.trim(),
+            requestData.habitus_exterior?.trim(),
+            requestData.exploracion_cabeza?.trim() || null,
+            requestData.exploracion_cuello?.trim() || null,
+            requestData.exploracion_torax?.trim() || null,
+            requestData.exploracion_abdomen?.trim() || null,
+            requestData.exploracion_extremidades?.trim() || null,
+            requestData.exploracion_columna?.trim() || null,
+            requestData.exploracion_genitales?.trim() || null,
+            requestData.exploracion_neurologico?.trim() || null,
+            requestData.estado_nutricional?.trim(),
+            requestData.estudios_laboratorio_gabinete?.trim(),
+            requestData.evolucion_analisis?.trim(),
+            requestData.diagnosticos?.trim(),
+            requestData.diagnosticos_guias?.trim() || null,
+            requestData.plan_estudios_tratamiento?.trim(),
+            requestData.interconsultas?.trim() || 'No se solicitaron interconsultas en esta evolución',
+            requestData.pronostico?.trim(),
+            requestData.indicaciones_medicas?.trim() || null,
+            requestData.observaciones_adicionales?.trim() || null
         ];
+        console.log('🔍 Ejecutando INSERT con valores:', values);
         const response = await database_1.default.query(query, values);
+        console.log('✅ INSERT exitoso:', response.rows[0]);
         return res.status(201).json({
             success: true,
             message: 'Nota de evolución creada correctamente',
@@ -62,15 +148,127 @@ const createNotaEvolucion = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error al crear nota de evolución:', error);
+        console.error('❌ Error completo en createNotaEvolucion:', error);
         return res.status(500).json({
             success: false,
             message: 'Error interno del servidor al crear nota de evolución',
-            error: process.env.NODE_ENV === 'development' ? error : {}
+            // error: process.env.NODE_ENV === 'development' ? {
+            //   message: error.message,
+            //   stack: error.stack
+            // } : {}
         });
     }
 };
 exports.createNotaEvolucion = createNotaEvolucion;
+// ==========================================
+// OBTENER NOTAS DE EVOLUCIÓN POR EXPEDIENTE
+// ==========================================
+const getNotasEvolucionByExpediente = async (req, res) => {
+    try {
+        const { id_expediente } = req.params;
+        if (!id_expediente || isNaN(parseInt(id_expediente))) {
+            return res.status(400).json({
+                success: false,
+                message: 'El ID del expediente debe ser un número válido'
+            });
+        }
+        const query = `
+      SELECT 
+        ne.*,
+        dc.fecha_elaboracion as fecha_documento,
+        CASE 
+          WHEN pm_rel.id_personal_medico IS NOT NULL 
+          THEN pm.nombre || ' ' || pm.apellido_paterno 
+          ELSE 'Sin asignar' 
+        END as medico_nombre,
+        pm_rel.especialidad,
+        s.nombre as servicio_nombre,
+        ROW_NUMBER() OVER (ORDER BY dc.fecha_elaboracion) as numero_evolucion
+      FROM nota_evolucion ne
+      INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+      LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
+      LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
+      LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
+      WHERE dc.id_expediente = $1 
+        AND dc.estado != 'Anulado'
+      ORDER BY dc.fecha_elaboracion ASC
+    `;
+        const response = await database_1.default.query(query, [id_expediente]);
+        return res.status(200).json({
+            success: true,
+            message: 'Notas de evolución del expediente obtenidas correctamente',
+            data: response.rows
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener notas de evolución del expediente:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al obtener notas de evolución del expediente',
+            error: process.env.NODE_ENV === 'development' ? error : {}
+        });
+    }
+};
+exports.getNotasEvolucionByExpediente = getNotasEvolucionByExpediente;
+// ==========================================
+// OBTENER NOTA DE EVOLUCIÓN POR DOCUMENTO
+// ==========================================
+const getNotaEvolucionByDocumento = async (req, res) => {
+    try {
+        const { id_documento } = req.params;
+        if (!id_documento || isNaN(parseInt(id_documento))) {
+            return res.status(400).json({
+                success: false,
+                message: 'El ID del documento debe ser un número válido'
+            });
+        }
+        const query = `
+      SELECT 
+        ne.*,
+        dc.id_expediente,
+        dc.fecha_elaboracion as fecha_documento,
+        dc.estado as estado_documento,
+        e.numero_expediente,
+        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
+        CASE 
+          WHEN pm_rel.id_personal_medico IS NOT NULL 
+          THEN pm.nombre || ' ' || pm.apellido_paterno 
+          ELSE 'Sin asignar' 
+        END as medico_nombre,
+        pm_rel.especialidad
+      FROM nota_evolucion ne
+      INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
+      INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
+      INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
+      INNER JOIN persona p ON pac.id_persona = p.id_persona
+      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+      LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
+      WHERE ne.id_documento = $1
+    `;
+        const response = await database_1.default.query(query, [id_documento]);
+        if (response.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Nota de evolución no encontrada para el documento especificado'
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            message: 'Nota de evolución obtenida correctamente',
+            data: response.rows[0]
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener nota de evolución por documento:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al obtener nota de evolución',
+            error: process.env.NODE_ENV === 'development' ? error : {}
+        });
+    }
+};
+exports.getNotaEvolucionByDocumento = getNotaEvolucionByDocumento;
 // ==========================================
 // OBTENER TODAS LAS NOTAS DE EVOLUCIÓN
 // ==========================================
@@ -137,14 +335,11 @@ const getNotasEvolucion = async (req, res) => {
         }
         if (buscar) {
             conditions.push(`(
-    e.numero_expediente ILIKE $${values.length + 1} OR
-    (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
-    ne.subjetivo ILIKE $${values.length + 1} OR
-    ne.objetivo ILIKE $${values.length + 1} OR
-    ne.analisis ILIKE $${values.length + 1} OR
-    ne.plan ILIKE $${values.length + 1}
-  )`);
-            // ↑ Agregar $ antes de cada número
+        e.numero_expediente ILIKE $${values.length + 1} OR
+        (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
+        ne.sintomas_signos ILIKE $${values.length + 1} OR
+        ne.diagnosticos ILIKE $${values.length + 1}
+      )`);
             values.push(`%${buscar}%`);
         }
         // Solo mostrar documentos no anulados
@@ -284,7 +479,7 @@ const updateNotaEvolucion = async (req, res) => {
                 value = value.trim();
             }
             values.push(value);
-            return `${field} = ${index + 1}`;
+            return `${field} = $${index + 1}`;
         }).join(', ');
         if (fields.length === 0) {
             return res.status(400).json({
@@ -296,7 +491,7 @@ const updateNotaEvolucion = async (req, res) => {
         const query = `
       UPDATE nota_evolucion 
       SET ${setClause}
-      WHERE id_nota_evolucion = ${values.length}
+      WHERE id_nota_evolucion = $${values.length}
       RETURNING *
     `;
         const response = await database_1.default.query(query, values);
@@ -359,187 +554,3 @@ const deleteNotaEvolucion = async (req, res) => {
     }
 };
 exports.deleteNotaEvolucion = deleteNotaEvolucion;
-// ==========================================
-// OBTENER NOTAS DE EVOLUCIÓN POR EXPEDIENTE
-// ==========================================
-const getNotasEvolucionByExpediente = async (req, res) => {
-    try {
-        const { id_expediente } = req.params;
-        if (!id_expediente || isNaN(parseInt(id_expediente))) {
-            return res.status(400).json({
-                success: false,
-                message: 'El ID del expediente debe ser un número válido'
-            });
-        }
-        const query = `
-      SELECT 
-        ne.*,
-        dc.fecha_elaboracion as fecha_documento,
-        CASE 
-          WHEN pm_rel.id_personal_medico IS NOT NULL 
-          THEN pm.nombre || ' ' || pm.apellido_paterno 
-          ELSE 'Sin asignar' 
-        END as medico_nombre,
-        pm_rel.especialidad,
-        s.nombre as servicio_nombre,
-        ROW_NUMBER() OVER (ORDER BY dc.fecha_elaboracion) as numero_evolucion
-      FROM nota_evolucion ne
-      INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
-      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
-      LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
-      LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
-      LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
-      WHERE dc.id_expediente = $1 
-        AND dc.estado != 'Anulado'
-      ORDER BY dc.fecha_elaboracion ASC
-    `;
-        const response = await database_1.default.query(query, [id_expediente]);
-        return res.status(200).json({
-            success: true,
-            message: 'Notas de evolución del expediente obtenidas correctamente',
-            data: response.rows
-        });
-    }
-    catch (error) {
-        console.error('Error al obtener notas de evolución del expediente:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al obtener notas de evolución del expediente',
-            error: process.env.NODE_ENV === 'development' ? error : {}
-        });
-    }
-};
-exports.getNotasEvolucionByExpediente = getNotasEvolucionByExpediente;
-// ==========================================
-// OBTENER NOTA DE EVOLUCIÓN POR DOCUMENTO
-// ==========================================
-const getNotaEvolucionByDocumento = async (req, res) => {
-    try {
-        const { id_documento } = req.params;
-        if (!id_documento || isNaN(parseInt(id_documento))) {
-            return res.status(400).json({
-                success: false,
-                message: 'El ID del documento debe ser un número válido'
-            });
-        }
-        const query = `
-      SELECT 
-        ne.*,
-        dc.id_expediente,
-        dc.fecha_elaboracion as fecha_documento,
-        dc.estado as estado_documento,
-        e.numero_expediente,
-        p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '') as paciente_nombre,
-        CASE 
-          WHEN pm_rel.id_personal_medico IS NOT NULL 
-          THEN pm.nombre || ' ' || pm.apellido_paterno 
-          ELSE 'Sin asignar' 
-        END as medico_nombre,
-        pm_rel.especialidad
-      FROM nota_evolucion ne
-      INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
-      INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
-      INNER JOIN paciente pac ON e.id_paciente = pac.id_paciente
-      INNER JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
-      LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
-      WHERE ne.id_documento = $1
-    `;
-        const response = await database_1.default.query(query, [id_documento]);
-        if (response.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Nota de evolución no encontrada para el documento especificado'
-            });
-        }
-        return res.status(200).json({
-            success: true,
-            message: 'Nota de evolución obtenida correctamente',
-            data: response.rows[0]
-        });
-    }
-    catch (error) {
-        console.error('Error al obtener nota de evolución por documento:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al obtener nota de evolución',
-            error: process.env.NODE_ENV === 'development' ? error : {}
-        });
-    }
-};
-exports.getNotaEvolucionByDocumento = getNotaEvolucionByDocumento;
-// ==========================================
-// OBTENER ESTADÍSTICAS BÁSICAS
-// ==========================================
-const getEstadisticasNotasEvolucion = async (req, res) => {
-    try {
-        const queries = {
-            totalNotas: `
-        SELECT COUNT(*) as total 
-        FROM nota_evolucion ne
-        INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
-        WHERE dc.estado != 'Anulado'
-      `,
-            notasRecientes: `
-        SELECT 
-          DATE(dc.fecha_elaboracion) as fecha,
-          COUNT(*) as cantidad
-        FROM nota_evolucion ne
-        INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
-        WHERE dc.fecha_elaboracion >= NOW() - INTERVAL '30 days'
-          AND dc.estado != 'Anulado'
-        GROUP BY DATE(dc.fecha_elaboracion)
-        ORDER BY fecha DESC
-        LIMIT 30
-      `,
-            completitudSOAP: `
-        SELECT 
-          CASE 
-            WHEN ne.subjetivo IS NOT NULL AND ne.subjetivo != '' THEN 1 
-            ELSE 0 
-          END +
-          CASE 
-            WHEN ne.objetivo IS NOT NULL AND ne.objetivo != '' THEN 1 
-            ELSE 0 
-          END +
-          CASE 
-            WHEN ne.analisis IS NOT NULL AND ne.analisis != '' THEN 1 
-            ELSE 0 
-          END +
-          CASE 
-            WHEN ne.plan IS NOT NULL AND ne.plan != '' THEN 1 
-            ELSE 0 
-          END as campos_completados,
-          COUNT(*) as cantidad
-        FROM nota_evolucion ne
-        INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
-        WHERE dc.estado != 'Anulado'
-        GROUP BY campos_completados
-        ORDER BY campos_completados
-      `
-        };
-        const [total, recientes, completitud] = await Promise.all([
-            database_1.default.query(queries.totalNotas),
-            database_1.default.query(queries.notasRecientes),
-            database_1.default.query(queries.completitudSOAP)
-        ]);
-        return res.status(200).json({
-            success: true,
-            message: 'Estadísticas de notas de evolución obtenidas correctamente',
-            data: {
-                total: parseInt(total.rows[0].total),
-                notas_recientes: recientes.rows,
-                completitud_soap: completitud.rows
-            }
-        });
-    }
-    catch (error) {
-        console.error('Error al obtener estadísticas de notas de evolución:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al obtener estadísticas de notas de evolución',
-            error: process.env.NODE_ENV === 'development' ? error : {}
-        });
-    }
-};
-exports.getEstadisticasNotasEvolucion = getEstadisticasNotasEvolucion;
