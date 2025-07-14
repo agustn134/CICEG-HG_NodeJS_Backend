@@ -8,12 +8,13 @@ const app = express();
 // ========== CONFIGURACIÓN CORS - DEBE IR ANTES DE TODO ==========
 app.use(cors({
   origin: [
-    'http://localhost:4200', // Angular development
-    'http://127.0.0.1:4200', // Angular alternative
-    // Agregar aquí otros dominios permitidos en producción
+    'http://localhost:4200',  // Angular dev server
+    'http://localhost:5173',  // Vite
+    'http://127.0.0.1:4200',
+    'http://127.0.0.1:5173'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
