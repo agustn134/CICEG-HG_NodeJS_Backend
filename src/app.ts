@@ -73,7 +73,7 @@ import registroTransfusionRoutes from './routes/documentos_clinicos/registro_tra
 // ===== Notas Especializadas =====
 import notaPsicologiaRoutes from './routes/notas_especializadas/nota_psicologia.routes';
 import notaNutricionRoutes from './routes/notas_especializadas/nota_nutricion.routes';
-
+import authRoutes from './controllers/auth/auth.routes';
 // ==========================================
 // RUTA PRINCIPAL DE INFORMACIÓN DEL SISTEMA
 // ==========================================
@@ -98,8 +98,8 @@ app.get('/', (req, res) => {
     },
     contacto: {
       desarrollo: 'Agustin de Practicas Y Estadias 2025',
-      email: 'agustinlopezparra13@gmail.gob.mx',
-      soporte: 'agustinlopezparra13@gmail.gob.mx'
+      email: 'agustinlopezparra13@gmail.com',
+      soporte: 'agustinlopezparra13@gmail.com'
     }
   });
 });
@@ -202,6 +202,8 @@ app.get('/api/134', (req, res) => {
 // CONFIGURACIÓN DE RUTAS DE LA API
 // ==========================================
 
+// ===== AUTENTICACIÓN =====
+app.use('/api/auth', authRoutes);
 // ===== CATÁLOGOS =====
 app.use('/api/catalogos/servicios', servicioRoutes);
 app.use('/api/catalogos/areas-interconsulta', areaInterconsultaRoutes);

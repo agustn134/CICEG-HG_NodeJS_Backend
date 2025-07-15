@@ -68,6 +68,7 @@ const registro_transfusion_routes_1 = __importDefault(require("./routes/document
 // ===== Notas Especializadas =====
 const nota_psicologia_routes_1 = __importDefault(require("./routes/notas_especializadas/nota_psicologia.routes"));
 const nota_nutricion_routes_1 = __importDefault(require("./routes/notas_especializadas/nota_nutricion.routes"));
+const auth_routes_1 = __importDefault(require("./controllers/auth/auth.routes"));
 // ==========================================
 // RUTA PRINCIPAL DE INFORMACIÓN DEL SISTEMA
 // ==========================================
@@ -92,8 +93,8 @@ app.get('/', (req, res) => {
         },
         contacto: {
             desarrollo: 'Agustin de Practicas Y Estadias 2025',
-            email: 'agustinlopezparra13@gmail.gob.mx',
-            soporte: 'agustinlopezparra13@gmail.gob.mx'
+            email: 'agustinlopezparra13@gmail.com',
+            soporte: 'agustinlopezparra13@gmail.com'
         }
     });
 });
@@ -190,6 +191,8 @@ app.get('/api/134', (req, res) => {
 // ==========================================
 // CONFIGURACIÓN DE RUTAS DE LA API
 // ==========================================
+// ===== AUTENTICACIÓN =====
+app.use('/api/auth', auth_routes_1.default);
 // ===== CATÁLOGOS =====
 app.use('/api/catalogos/servicios', servicio_routes_1.default);
 app.use('/api/catalogos/areas-interconsulta', area_interconsulta_routes_1.default);
