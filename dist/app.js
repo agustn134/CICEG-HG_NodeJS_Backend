@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const responses_1 = require("./utils/responses");
+const configuracion_routes_1 = __importDefault(require("./routes/configuracion.routes"));
+const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
 // ========== CONFIGURACIÓN CORS - DEBE IR ANTES DE TODO ==========
 app.use((0, cors_1.default)({
@@ -19,6 +21,7 @@ app.use((0, cors_1.default)({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../public/uploads')));
 // Configuración de parseo de JSON y URL encoded
 app.use(express_1.default.json({
     limit: '10mb',
@@ -230,6 +233,7 @@ app.use('/api/documentos-clinicos/registros-transfusion', registro_transfusion_r
 // ===== NOTAS ESPECIALIZADAS =====
 app.use('/api/notas-especializadas/notas-psicologia', nota_psicologia_routes_1.default);
 app.use('/api/notas-especializadas/notas-nutricion', nota_nutricion_routes_1.default);
+app.use('/api/configuracion', configuracion_routes_1.default);
 // ==========================================
 // MIDDLEWARE PARA LOGGING DE REQUESTS (DESARROLLO)
 // ==========================================

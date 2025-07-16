@@ -730,7 +730,7 @@ export const cambiarPassword = async (req: Request, res: Response): Promise<Resp
     });
   }
 };
-
+  
 // ==========================================
 // ACTIVAR/DESACTIVAR ADMINISTRADOR
 // ==========================================

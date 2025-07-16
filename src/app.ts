@@ -2,6 +2,8 @@
 import express from 'express';
 import cors from 'cors';
 import { ResponseHelper } from './utils/responses';
+import configuracionRoutes from './routes/configuracion.routes';
+import path from 'path';
 
 const app = express();
 
@@ -17,6 +19,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Configuración de parseo de JSON y URL encoded
 app.use(express.json({ 
@@ -245,7 +248,7 @@ app.use('/api/documentos-clinicos/registros-transfusion', registroTransfusionRou
 // ===== NOTAS ESPECIALIZADAS =====
 app.use('/api/notas-especializadas/notas-psicologia', notaPsicologiaRoutes);
 app.use('/api/notas-especializadas/notas-nutricion', notaNutricionRoutes);
-
+app.use('/api/configuracion', configuracionRoutes);
 // ==========================================
 // MIDDLEWARE PARA LOGGING DE REQUESTS (DESARROLLO)
 // ==========================================
