@@ -2680,3 +2680,26 @@ SELECT crear_nota_evolucion_con_plantilla(
 -- Hospital General San Luis de la Paz
 -- Tabla Nota de Evolución - Formato Específico
 -- ==========================================
+
+
+--HAY UN TRIGGER QUE TE VA A CAUSER PEDOS CUIDADO ALERTA BUSCALO
+
+--LUEGO ALTERE LAS TABLAS PARA MANEJAR EL LOGIN
+-- Cambiar las columnas para texto plano
+ALTER TABLE personal_medico 
+ADD COLUMN IF NOT EXISTS usuario VARCHAR(50) UNIQUE,
+ADD COLUMN IF NOT EXISTS password_texto VARCHAR(100),  -- 🔥 SIN HASH
+ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP,
+ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+select * from personal_medico
+
+
+-- Actualizar administrador
+UPDATE administrador 
+SET password_texto = 'admin123'
+WHERE id_administrador = 3;
+ALTER TABLE administrador 
+ADD COLUMN IF NOT EXISTS password_texto VARCHAR(100),  -- 🔥 SIN HASH
+ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP,
+ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+select * from administrador

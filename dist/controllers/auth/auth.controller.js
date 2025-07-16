@@ -38,13 +38,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cambiarPassword = exports.logout = exports.verifyToken = exports.login = void 0;
 const database_1 = __importDefault(require("../../config/database"));
-const jwt = __importStar(require("jsonwebtoken")); // 🔥 CAMBIO: import con *
-// NO importar bcrypt para evitar conflictos
+const jwt = __importStar(require("jsonwebtoken"));
+const bcrypt_1 = __importDefault(require("bcrypt")); // 🔥 IMPORTANTE: AGREGAR ESTA LÍNEA
 // 🔥 TIPADO EXPLÍCITO CORRECTO
 const JWT_SECRET = process.env.JWT_SECRET || 'hospital_ciceg_secret_key_2025';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h'; // 🔥 Cambio aquí
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 // ==========================================
-// LOGIN PRINCIPAL - CORREGIDO
+// LOGIN PRINCIPAL - SIN CAMBIOS
 // ==========================================
 const login = async (req, res) => {
     try {
@@ -80,8 +80,7 @@ const login = async (req, res) => {
             usuario: userData.usuario,
             tipoUsuario: userData.tipo_usuario,
             nombre: userData.nombre_completo
-        }, JWT_SECRET, { expiresIn: '24h' } // 🔥 Hardcodeado para evitar problemas de tipo
-        );
+        }, JWT_SECRET, { expiresIn: '24h' });
         return res.status(200).json({
             success: true,
             message: 'Login exitoso',
@@ -111,47 +110,56 @@ const login = async (req, res) => {
 };
 exports.login = login;
 // ==========================================
-// BUSCAR ADMINISTRADOR - CORREGIDO PARA TABLA ACTUAL
+// BUSCAR ADMINISTRADOR - AHORA FUNCIONA CON BCRYPT
 // ==========================================
 async function buscarAdministrador(usuario, password) {
-    const client = await database_1.default.connect();
     try {
         const query = `
       SELECT 
         a.id_administrador as id,
         a.usuario,
-        a.password_texto,
-        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as nombre_completo,
+        a.contrasena,  -- 🔥 Hash bcrypt
         a.nivel_acceso,
-        a.activo
+        a.activo,
+        CASE 
+          WHEN a.nivel_acceso = 1 THEN 'Administrador'
+          WHEN a.nivel_acceso = 2 THEN 'Supervisor'
+          WHEN a.nivel_acceso = 3 THEN 'Usuario'
+          ELSE 'Desconocido'
+        END as nivel_acceso_texto,
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_completo
       FROM administrador a
-      INNER JOIN persona p ON a.id_persona = p.id_persona
-      WHERE a.usuario = $1 AND a.activo = true
+      JOIN persona p ON a.id_persona = p.id_persona
+      WHERE UPPER(a.usuario) = UPPER($1) AND a.activo = true
     `;
-        const result = await client.query(query, [usuario]);
+        const result = await database_1.default.query(query, [usuario]);
         if (result.rows.length === 0) {
             return null;
         }
-        const user = result.rows[0];
-        // 🔥 VERIFICAR CONTRASEÑA EN TEXTO PLANO
-        if (password !== user.password_texto) {
+        const admin = result.rows[0];
+        // 🔥 AHORA FUNCIONA: Verificar contraseña con hash
+        const passwordMatch = await bcrypt_1.default.compare(password, admin.contrasena);
+        if (!passwordMatch) {
             return null;
         }
+        // 🔥 Actualizar último login
+        await database_1.default.query('UPDATE administrador SET ultimo_login = CURRENT_TIMESTAMP WHERE id_administrador = $1', [admin.id]);
         return {
-            id: user.id,
-            usuario: user.usuario,
-            nombre_completo: user.nombre_completo,
+            id: admin.id,
+            usuario: admin.usuario,
+            nombre_completo: admin.nombre_completo,
             tipo_usuario: 'administrador',
-            nivel_acceso: user.nivel_acceso.toString(),
-            activo: user.activo
+            nivel_acceso: admin.nivel_acceso_texto,
+            activo: admin.activo
         };
     }
-    finally {
-        client.release();
+    catch (error) {
+        console.error('Error al buscar administrador:', error);
+        return null;
     }
 }
 // ==========================================
-// BUSCAR MÉDICO - IGUAL QUE ANTES
+// BUSCAR MÉDICO - SIN CAMBIOS
 // ==========================================
 async function buscarMedico(usuario, password) {
     const client = await database_1.default.connect();
@@ -175,7 +183,7 @@ async function buscarMedico(usuario, password) {
             return null;
         }
         const user = result.rows[0];
-        // 🔥 VERIFICAR CONTRASEÑA EN TEXTO PLANO
+        // 🔥 VERIFICAR CONTRASEÑA EN TEXTO PLANO (para médicos)
         if (password !== user.password_texto) {
             return null;
         }
@@ -194,9 +202,7 @@ async function buscarMedico(usuario, password) {
         client.release();
     }
 }
-// ==========================================
-// VERIFICAR TOKEN - SIMPLIFICADO
-// ==========================================
+// Resto de funciones igual...
 const verifyToken = async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
@@ -226,7 +232,6 @@ const verifyToken = async (req, res) => {
     }
 };
 exports.verifyToken = verifyToken;
-// Las demás funciones (logout, cambiarPassword) igual que antes...
 const logout = async (req, res) => {
     return res.status(200).json({
         success: true,

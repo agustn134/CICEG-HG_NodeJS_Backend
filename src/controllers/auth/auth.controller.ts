@@ -2,12 +2,13 @@
 import { Request, Response } from 'express';
 import { QueryResult } from 'pg';
 import pool from '../../config/database';
-import * as jwt from 'jsonwebtoken'; // 🔥 CAMBIO: import con *
-// NO importar bcrypt para evitar conflictos
+import * as jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt'; // 🔥 IMPORTANTE: AGREGAR ESTA LÍNEA
 
 // 🔥 TIPADO EXPLÍCITO CORRECTO
 const JWT_SECRET: jwt.Secret = process.env.JWT_SECRET || 'hospital_ciceg_secret_key_2025';
-const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '24h'; // 🔥 Cambio aquí
+const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '24h';
+
 // Interfaces (sin cambios)
 interface LoginRequest {
   usuario: string;
@@ -28,7 +29,7 @@ interface UserData {
 }
 
 // ==========================================
-// LOGIN PRINCIPAL - CORREGIDO
+// LOGIN PRINCIPAL - SIN CAMBIOS
 // ==========================================
 export const login = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -72,7 +73,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         nombre: userData.nombre_completo
       },
       JWT_SECRET,
-      { expiresIn: '24h' } // 🔥 Hardcodeado para evitar problemas de tipo
+      { expiresIn: '24h' }
     );
 
     return res.status(200).json({
@@ -104,54 +105,66 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 };
 
 // ==========================================
-// BUSCAR ADMINISTRADOR - CORREGIDO PARA TABLA ACTUAL
+// BUSCAR ADMINISTRADOR - AHORA FUNCIONA CON BCRYPT
 // ==========================================
 async function buscarAdministrador(usuario: string, password: string): Promise<UserData | null> {
-  const client = await pool.connect();
-  
   try {
     const query = `
       SELECT 
         a.id_administrador as id,
         a.usuario,
-        a.password_texto,
-        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as nombre_completo,
+        a.contrasena,  -- 🔥 Hash bcrypt
         a.nivel_acceso,
-        a.activo
+        a.activo,
+        CASE 
+          WHEN a.nivel_acceso = 1 THEN 'Administrador'
+          WHEN a.nivel_acceso = 2 THEN 'Supervisor'
+          WHEN a.nivel_acceso = 3 THEN 'Usuario'
+          ELSE 'Desconocido'
+        END as nivel_acceso_texto,
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_completo
       FROM administrador a
-      INNER JOIN persona p ON a.id_persona = p.id_persona
-      WHERE a.usuario = $1 AND a.activo = true
+      JOIN persona p ON a.id_persona = p.id_persona
+      WHERE UPPER(a.usuario) = UPPER($1) AND a.activo = true
     `;
     
-    const result: QueryResult = await client.query(query, [usuario]);
+    const result: QueryResult = await pool.query(query, [usuario]);
     
     if (result.rows.length === 0) {
       return null;
     }
     
-    const user = result.rows[0];
+    const admin = result.rows[0];
     
-    // 🔥 VERIFICAR CONTRASEÑA EN TEXTO PLANO
-    if (password !== user.password_texto) {
+    // 🔥 AHORA FUNCIONA: Verificar contraseña con hash
+    const passwordMatch = await bcrypt.compare(password, admin.contrasena);
+    
+    if (!passwordMatch) {
       return null;
     }
     
-    return {
-      id: user.id,
-      usuario: user.usuario,
-      nombre_completo: user.nombre_completo,
-      tipo_usuario: 'administrador',
-      nivel_acceso: user.nivel_acceso.toString(),
-      activo: user.activo
-    };
+    // 🔥 Actualizar último login
+    await pool.query(
+      'UPDATE administrador SET ultimo_login = CURRENT_TIMESTAMP WHERE id_administrador = $1',
+      [admin.id]
+    );
     
-  } finally {
-    client.release();
+    return {
+      id: admin.id,
+      usuario: admin.usuario,
+      nombre_completo: admin.nombre_completo,
+      tipo_usuario: 'administrador',
+      nivel_acceso: admin.nivel_acceso_texto,
+      activo: admin.activo
+    };
+  } catch (error) {
+    console.error('Error al buscar administrador:', error);
+    return null;
   }
 }
 
 // ==========================================
-// BUSCAR MÉDICO - IGUAL QUE ANTES
+// BUSCAR MÉDICO - SIN CAMBIOS
 // ==========================================
 async function buscarMedico(usuario: string, password: string): Promise<UserData | null> {
   const client = await pool.connect();
@@ -180,7 +193,7 @@ async function buscarMedico(usuario: string, password: string): Promise<UserData
     
     const user = result.rows[0];
     
-    // 🔥 VERIFICAR CONTRASEÑA EN TEXTO PLANO
+    // 🔥 VERIFICAR CONTRASEÑA EN TEXTO PLANO (para médicos)
     if (password !== user.password_texto) {
       return null;
     }
@@ -201,9 +214,7 @@ async function buscarMedico(usuario: string, password: string): Promise<UserData
   }
 }
 
-// ==========================================
-// VERIFICAR TOKEN - SIMPLIFICADO
-// ==========================================
+// Resto de funciones igual...
 export const verifyToken = async (req: Request, res: Response): Promise<Response> => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -236,7 +247,6 @@ export const verifyToken = async (req: Request, res: Response): Promise<Response
   }
 };
 
-// Las demás funciones (logout, cambiarPassword) igual que antes...
 export const logout = async (req: Request, res: Response): Promise<Response> => {
   return res.status(200).json({
     success: true,

@@ -2276,17 +2276,6 @@ ORDER BY documentos_ultimos_7_dias DESC;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 -- ==========================================
 -- PASO 21: FUNCIONES DE REPORTES ESPECÍFICOS
 -- ==========================================
@@ -2787,6 +2776,24 @@ COMMENT ON COLUMN nota_evolucion.plan_estudios_tratamiento IS 'Campo obligatorio
 COMMENT ON COLUMN nota_evolucion.interconsultas IS 'Campo opcional - por defecto indica que no hubo interconsultas';
 COMMENT ON COLUMN nota_evolucion.pronostico IS 'Campo obligatorio - PRONÓSTICO';
 
--- ==========================================
--- PASO 10: EJEMPLO DE USO
--- ==================
+--HAY UN TRIGGER QUE TE VA A CAUSER PEDOS CUIDADO ALERTA BUSCALO
+
+--LUEGO ALTERE LAS TABLAS PARA MANEJAR EL LOGIN
+-- Cambiar las columnas para texto plano
+ALTER TABLE personal_medico 
+ADD COLUMN IF NOT EXISTS usuario VARCHAR(50) UNIQUE,
+ADD COLUMN IF NOT EXISTS password_texto VARCHAR(100),  -- 🔥 SIN HASH
+ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP,
+ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+select * from personal_medico
+
+
+-- Actualizar administrador
+UPDATE administrador 
+SET password_texto = 'admin123'
+WHERE id_administrador = 3;
+ALTER TABLE administrador 
+ADD COLUMN IF NOT EXISTS password_texto VARCHAR(100),  -- 🔥 SIN HASH
+ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP,
+ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+select * from administrador
