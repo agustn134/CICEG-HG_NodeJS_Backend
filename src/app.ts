@@ -4,8 +4,19 @@ import cors from 'cors';
 import { ResponseHelper } from './utils/responses';
 import configuracionRoutes from './routes/configuracion.routes';
 import path from 'path';
+import { InicializadorSistema } from './utils/inicializar-sistema';
 
 const app = express();
+
+(async () => {
+  try {
+    console.log('🏥 Inicializando sistema CICEG-HG...');
+    await InicializadorSistema.inicializarLogosDefault();
+    console.log('✅ Sistema inicializado correctamente');
+  } catch (error) {
+    console.error('❌ Error al inicializar sistema:', error);
+  }
+})();
 
 // ========== CONFIGURACIÓN CORS - DEBE IR ANTES DE TODO ==========
 app.use(cors({

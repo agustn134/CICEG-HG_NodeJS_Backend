@@ -4,7 +4,8 @@ import {
   getConfiguracionLogos, 
   actualizarConfiguracion, 
   subirLogo, 
-  upload 
+  upload, 
+  debugLogos
 } from '../controllers/configuracion.controller';
 
 const router = Router();
@@ -17,5 +18,8 @@ router.put('/logos', actualizarConfiguracion);
 
 // POST /api/configuracion/upload-logo - Subir archivo de logo
 router.post('/upload-logo', upload.single('archivo'), subirLogo);
+
+// En configuracion.routes.ts
+router.get('/debug-logos', debugLogos);
 
 export default router;

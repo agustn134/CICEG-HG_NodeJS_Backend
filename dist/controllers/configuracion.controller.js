@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.subirLogo = exports.actualizarConfiguracion = exports.getConfiguracionLogos = exports.upload = void 0;
+exports.debugLogos = exports.subirLogo = exports.actualizarConfiguracion = exports.getConfiguracionLogos = exports.upload = void 0;
 const database_1 = __importDefault(require("../config/database"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
@@ -28,7 +28,7 @@ exports.upload = (0, multer_1.default)({
     storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
     fileFilter: (req, file, cb) => {
-        const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-icon'];
+        const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-icon', 'image/svg+xml'];
         if (tiposPermitidos.includes(file.mimetype)) {
             cb(null, true);
         }
@@ -37,7 +37,23 @@ exports.upload = (0, multer_1.default)({
         }
     }
 });
-// Obtener configuración de logos
+// 🔥 FUNCIÓN AUXILIAR PARA VERIFICAR ARCHIVOS
+const verificarArchivo = (ruta, fallback) => {
+    if (!ruta)
+        return fallback;
+    const rutaCompleta = path_1.default.join(__dirname, '../../public', ruta);
+    if (fs_1.default.existsSync(rutaCompleta)) {
+        return ruta;
+    }
+    // Intentar versión SVG si no existe PNG
+    const rutaSvg = ruta.replace(/\.(png|jpg|jpeg)$/i, '.svg');
+    const rutaSvgCompleta = path_1.default.join(__dirname, '../../public', rutaSvg);
+    if (fs_1.default.existsSync(rutaSvgCompleta)) {
+        return rutaSvg;
+    }
+    return fallback;
+};
+// 🔥 OBTENER CONFIGURACIÓN CON VERIFICACIÓN DE ARCHIVOS
 const getConfiguracionLogos = async (req, res) => {
     try {
         const query = `
@@ -54,17 +70,16 @@ const getConfiguracionLogos = async (req, res) => {
             acc[row.parametro] = row.valor;
             return acc;
         }, {});
-        // Valores por defecto si no existen
+        // 🔥 VALORES POR DEFECTO QUE SIEMPRE FUNCIONAN
         const configDefault = {
-            logo_principal: '/uploads/logos/logo-principal.png',
-            logo_sidebar: '/uploads/logos/logo-sidebar.png',
-            favicon: '/uploads/logos/favicon.ico',
-            logo_gobierno: '/uploads/logos/logo-gobierno.png',
-            nombre_hospital: 'Hospital General San Luis de la Paz',
-            nombre_dependencia: 'Secretaría de Salud de Guanajuato',
-            color_primario: '#1e40af',
-            color_secundario: '#3b82f6',
-            ...configuracion
+            logo_principal: verificarArchivo(configuracion.logo_principal, '/uploads/logos/logo-principal-default.svg'),
+            logo_sidebar: verificarArchivo(configuracion.logo_sidebar, '/uploads/logos/logo-sidebar-default.svg'),
+            favicon: verificarArchivo(configuracion.favicon, '/uploads/logos/favicon.ico'),
+            logo_gobierno: verificarArchivo(configuracion.logo_gobierno, '/uploads/logos/logo-gobierno-default.svg'),
+            nombre_hospital: configuracion.nombre_hospital || 'Hospital General San Luis de la Paz',
+            nombre_dependencia: configuracion.nombre_dependencia || 'Secretaría de Salud de Guanajuato',
+            color_primario: configuracion.color_primario || '#1e40af',
+            color_secundario: configuracion.color_secundario || '#3b82f6'
         };
         return res.status(200).json(configDefault);
     }
@@ -149,3 +164,31 @@ const subirLogo = async (req, res) => {
     }
 };
 exports.subirLogo = subirLogo;
+// Agregar al final de configuracion.controller.ts
+const debugLogos = async (req, res) => {
+    const uploadPath = path_1.default.join(__dirname, '../../public/uploads/logos');
+    try {
+        const archivos = fs_1.default.readdirSync(uploadPath);
+        const estadoArchivos = archivos.map(archivo => {
+            const rutaCompleta = path_1.default.join(uploadPath, archivo);
+            const stats = fs_1.default.statSync(rutaCompleta);
+            return {
+                nombre: archivo,
+                tamaño: stats.size,
+                modificado: stats.mtime,
+                existe: fs_1.default.existsSync(rutaCompleta)
+            };
+        });
+        return res.json({
+            directorio: uploadPath,
+            archivos: estadoArchivos,
+            servidor_activo: true
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            directorio: uploadPath
+        });
+    }
+};
+exports.debugLogos = debugLogos;

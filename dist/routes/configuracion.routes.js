@@ -10,4 +10,6 @@ router.get('/logos', configuracion_controller_1.getConfiguracionLogos);
 router.put('/logos', configuracion_controller_1.actualizarConfiguracion);
 // POST /api/configuracion/upload-logo - Subir archivo de logo
 router.post('/upload-logo', configuracion_controller_1.upload.single('archivo'), configuracion_controller_1.subirLogo);
+// En configuracion.routes.ts
+router.get('/debug-logos', configuracion_controller_1.debugLogos);
 exports.default = router;
