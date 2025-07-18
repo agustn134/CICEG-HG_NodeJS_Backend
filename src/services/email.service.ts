@@ -1,4 +1,4 @@
-// src/services/email.service.ts
+// /home/agustin/CICEG-HG_NodeJS_Backend/src/services/email.service.ts
 import nodemailer from 'nodemailer';
 import { Pool } from 'pg';
 import pool from '../config/database';
@@ -18,7 +18,8 @@ export class EmailService {
 
   async sendPasswordResetEmail(email: string, resetToken: string): Promise<boolean> {
     try {
-      const resetLink = `http://localhost:4200/auth/reset-password?token=${resetToken}`;
+      // 🔧 CORREGIDO: Cambiar ruta del enlace
+      const resetLink = `http://localhost:4200/cambiar-password?token=${resetToken}`;
       
       const mailOptions = {
         from: '"Hospital General - SICEG" <siceghospital.slp.gto@gmail.com>',

@@ -194,6 +194,100 @@ export const validateResetToken = async (req: Request, res: Response): Promise<R
 /**
  * Restablecer contraseña
  */
+// export const resetPassword = async (req: Request, res: Response): Promise<Response> => {
+
+//   try {
+//     const { token, newPassword } = req.body;
+
+//     console.log('🔄 Restableciendo contraseña...');
+
+//     if (!token || !newPassword) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Token y nueva contraseña son requeridos'
+//       });
+//     }
+
+//     // Validar longitud de contraseña
+//     if (newPassword.length < 6) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'La contraseña debe tener al menos 6 caracteres'
+//       });
+//     }
+
+//     // Verificar token
+//     const tokenQuery = `
+//       SELECT email, tipo_usuario, expires_at, id_usuario_referencia
+//       FROM password_reset_tokens
+//       WHERE token = $1 AND expires_at > NOW() AND is_active = true
+//     `;
+
+//     const tokenResult: QueryResult = await pool.query(tokenQuery, [token]);
+
+//     if (tokenResult.rows.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Token inválido o expirado'
+//       });
+//     }
+
+//     const { email, tipo_usuario, id_usuario_referencia } = tokenResult.rows[0];
+
+//     // Actualizar contraseña según el tipo de usuario
+//     let updateQuery: string;
+//     let updateParams: any[];
+
+//     switch (tipo_usuario) {
+//       case 'medico':
+//         updateQuery = `
+//           UPDATE personal_medico 
+//           SET password_texto = $1, fecha_actualizacion = CURRENT_TIMESTAMP
+//           WHERE id_personal_medico = $2
+//         `;
+//         updateParams = [newPassword, id_usuario_referencia];
+//         break;
+
+//       case 'administrador':
+//         updateQuery = `
+//           UPDATE administrador 
+//           SET password_texto = $1, fecha_actualizacion = CURRENT_TIMESTAMP
+//           WHERE id_administrador = $2
+//         `;
+//         updateParams = [newPassword, id_usuario_referencia];
+//         break;
+
+//       default:
+//         return res.status(400).json({
+//           success: false,
+//           message: 'Tipo de usuario no válido'
+//         });
+//     }
+
+//     await pool.query(updateQuery, updateParams);
+
+//     // Marcar token como usado
+//     await pool.query(
+//       'UPDATE password_reset_tokens SET is_active = false, used_at = NOW(), invalidated_reason = $1 WHERE token = $2', 
+//       ['Contraseña cambiada exitosamente', token]
+//     );
+
+//     console.log('✅ Contraseña restablecida exitosamente para:', email);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Contraseña restablecida exitosamente'
+//     });
+
+//   } catch (error) {
+//     console.error('❌ Error restableciendo contraseña:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Error interno del servidor'
+//     });
+//   }
+// };
+
 export const resetPassword = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { token, newPassword } = req.body;
@@ -233,6 +327,10 @@ export const resetPassword = async (req: Request, res: Response): Promise<Respon
 
     const { email, tipo_usuario, id_usuario_referencia } = tokenResult.rows[0];
 
+    // 🔧 NUEVO: Hashear la contraseña
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
     // Actualizar contraseña según el tipo de usuario
     let updateQuery: string;
     let updateParams: any[];
@@ -241,19 +339,21 @@ export const resetPassword = async (req: Request, res: Response): Promise<Respon
       case 'medico':
         updateQuery = `
           UPDATE personal_medico 
-          SET password_texto = $1, fecha_actualizacion = CURRENT_TIMESTAMP
-          WHERE id_personal_medico = $2
+          SET password = $1, password_texto = $2, fecha_actualizacion = CURRENT_TIMESTAMP
+          WHERE id_personal_medico = $3
+          RETURNING id_personal_medico
         `;
-        updateParams = [newPassword, id_usuario_referencia];
+        updateParams = [hashedPassword, newPassword, id_usuario_referencia];
         break;
 
       case 'administrador':
         updateQuery = `
           UPDATE administrador 
-          SET password_texto = $1, fecha_actualizacion = CURRENT_TIMESTAMP
-          WHERE id_administrador = $2
+          SET contrasena = $1, password_texto = $2, fecha_actualizacion = CURRENT_TIMESTAMP
+          WHERE id_administrador = $3
+          RETURNING id_administrador
         `;
-        updateParams = [newPassword, id_usuario_referencia];
+        updateParams = [hashedPassword, newPassword, id_usuario_referencia];
         break;
 
       default:
@@ -263,7 +363,14 @@ export const resetPassword = async (req: Request, res: Response): Promise<Respon
         });
     }
 
-    await pool.query(updateQuery, updateParams);
+    const updateResult = await pool.query(updateQuery, updateParams);
+    
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
 
     // Marcar token como usado
     await pool.query(
@@ -272,6 +379,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<Respon
     );
 
     console.log('✅ Contraseña restablecida exitosamente para:', email);
+    console.log('✅ Hash generado y almacenado correctamente');
 
     return res.status(200).json({
       success: true,
