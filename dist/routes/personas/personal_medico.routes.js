@@ -23,4 +23,5 @@ router.post("/", personal_medico_controller_1.createPersonalMedico);
 router.put("/:id", personal_medico_controller_1.updatePersonalMedico);
 // DELETE /api/personas/personal-medico/:id - Eliminar personal médico
 router.delete("/:id", personal_medico_controller_1.deletePersonalMedico);
+router.get("/:id/perfil-completo", personal_medico_controller_1.getPerfilMedicoConPacientes);
 exports.default = router;

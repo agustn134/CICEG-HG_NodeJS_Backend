@@ -7,7 +7,8 @@ import {
   updatePersonalMedico,
   deletePersonalMedico,
   getPersonalMedicoActivo,
-  getEstadisticasPersonalMedico
+  getEstadisticasPersonalMedico,
+  getPerfilMedicoConPacientes
 } from "../../controllers/personas/personal_medico.controller";
 
 const router = Router();
@@ -38,5 +39,7 @@ router.put("/:id", updatePersonalMedico);
 
 // DELETE /api/personas/personal-medico/:id - Eliminar personal médico
 router.delete("/:id", deletePersonalMedico);
+
+router.get("/:id/perfil-completo", getPerfilMedicoConPacientes);
 
 export default router;

@@ -651,4 +651,89 @@ export const getEstadisticasPersonalMedico = async (req: Request, res: Response)
       error: process.env.NODE_ENV === 'development' ? error : {}
     });
   }
+
+
+  
+};
+
+
+// ==========================================
+// OBTENER PERFIL MÉDICO CON PACIENTES
+// ==========================================
+export const getPerfilMedicoConPacientes = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID debe ser un número válido'
+      });
+    }
+    
+    // Datos básicos del médico
+    const medicoQuery = `
+      SELECT 
+        pm.id_personal_medico,
+        pm.numero_cedula,
+        pm.especialidad,
+        pm.cargo,
+        pm.departamento,
+        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_completo,
+        COUNT(dc.id_documento) as total_documentos_creados,
+        COUNT(CASE WHEN dc.fecha_elaboracion >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as documentos_mes_actual
+      FROM personal_medico pm
+      JOIN persona p ON pm.id_persona = p.id_persona
+      LEFT JOIN documento_clinico dc ON pm.id_personal_medico = dc.id_personal_creador
+      WHERE pm.id_personal_medico = $1
+      GROUP BY pm.id_personal_medico, pm.numero_cedula, pm.especialidad, pm.cargo, pm.departamento, p.nombre, p.apellido_paterno, p.apellido_materno
+    `;
+    
+    // Pacientes atendidos por este médico
+    const pacientesQuery = `
+      SELECT DISTINCT
+        pac.id_paciente,
+        CONCAT(pp.nombre, ' ', pp.apellido_paterno, ' ', pp.apellido_materno) as nombre_completo,
+        e.numero_expediente,
+        EXTRACT(YEAR FROM AGE(pp.fecha_nacimiento)) as edad,
+        MAX(dc.fecha_elaboracion) as ultimo_documento,
+        COUNT(dc.id_documento) as total_documentos
+      FROM paciente pac
+      JOIN persona pp ON pac.id_persona = pp.id_persona
+      JOIN expediente e ON pac.id_paciente = e.id_paciente
+      JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
+      WHERE dc.id_personal_creador = $1
+      GROUP BY pac.id_paciente, pp.nombre, pp.apellido_paterno, pp.apellido_materno, e.numero_expediente, pp.fecha_nacimiento
+      ORDER BY ultimo_documento DESC
+      LIMIT 20
+    `;
+    
+    const [medicoResult, pacientesResult] = await Promise.all([
+      pool.query(medicoQuery, [id]),
+      pool.query(pacientesQuery, [id])
+    ]);
+    
+    if (medicoResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Médico no encontrado'
+      });
+    }
+    
+    const medico = medicoResult.rows[0];
+    medico.pacientes_atendidos = pacientesResult.rows;
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Perfil médico obtenido correctamente',
+      data: medico
+    });
+  } catch (error) {
+    console.error('Error al obtener perfil médico:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' ? error : {}
+    });
+  }
 };
