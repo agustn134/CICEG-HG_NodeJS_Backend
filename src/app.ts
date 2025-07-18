@@ -5,6 +5,7 @@ import { ResponseHelper } from './utils/responses';
 import configuracionRoutes from './routes/configuracion.routes';
 import path from 'path';
 import { InicializadorSistema } from './utils/inicializar-sistema';
+import passwordResetRoutes from './routes/auth/password-reset.routes';
 
 const app = express();
 
@@ -218,6 +219,9 @@ app.get('/api/134', (req, res) => {
 
 // ===== AUTENTICACIÓN =====
 app.use('/api/auth', authRoutes);
+
+app.use('/api/auth/password-reset', passwordResetRoutes);
+
 // ===== CATÁLOGOS =====
 app.use('/api/catalogos/servicios', servicioRoutes);
 app.use('/api/catalogos/areas-interconsulta', areaInterconsultaRoutes);
