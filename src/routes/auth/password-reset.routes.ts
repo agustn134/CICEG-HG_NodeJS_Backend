@@ -1,16 +1,20 @@
 // src/routes/auth/password-reset.routes.ts
 import { Router } from 'express';
-import passwordResetController from '../../controllers/auth/password-reset.controller';
+import { 
+  requestPasswordReset, 
+  validateResetToken, 
+  resetPassword 
+} from '../../controllers/auth/password-reset.controller';
 
 const router = Router();
 
 // Solicitar recuperación de contraseña
-router.post('/request', passwordResetController.requestPasswordReset);
+router.post('/request', requestPasswordReset);
 
 // Validar token de recuperación
-router.get('/validate/:token', passwordResetController.validateResetToken);
+router.get('/validate/:token', validateResetToken);
 
 // Restablecer contraseña
-router.post('/reset', passwordResetController.resetPassword);
+router.post('/reset', resetPassword);
 
 export default router;

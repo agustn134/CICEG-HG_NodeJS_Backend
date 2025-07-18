@@ -3044,3 +3044,12 @@ SELECT limpiar_tokens_expirados() as tokens_limpiados_inicial;
 
 -- Mensaje de confirmación
 SELECT 'Tabla password_reset_tokens creada exitosamente para SICEG Hospital General San Luis de la Paz' as resultado;
+
+
+-- Eliminar el constraint deferrable problemático
+ALTER TABLE password_reset_tokens 
+DROP CONSTRAINT IF EXISTS unique_active_email_token;
+
+-- Crear un constraint único normal
+ALTER TABLE password_reset_tokens 
+ADD CONSTRAINT unique_active_email_token UNIQUE(email);
