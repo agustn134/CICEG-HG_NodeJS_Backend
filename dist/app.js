@@ -9,6 +9,7 @@ const responses_1 = require("./utils/responses");
 const configuracion_routes_1 = __importDefault(require("./routes/configuracion.routes"));
 const path_1 = __importDefault(require("path"));
 const inicializar_sistema_1 = require("./utils/inicializar-sistema");
+const password_reset_routes_1 = __importDefault(require("./routes/auth/password-reset.routes"));
 const app = (0, express_1.default)();
 (async () => {
     try {
@@ -207,6 +208,7 @@ app.get('/api/134', (req, res) => {
 // ==========================================
 // ===== AUTENTICACIÓN =====
 app.use('/api/auth', auth_routes_1.default);
+app.use('/api/auth/password-reset', password_reset_routes_1.default);
 // ===== CATÁLOGOS =====
 app.use('/api/catalogos/servicios', servicio_routes_1.default);
 app.use('/api/catalogos/areas-interconsulta', area_interconsulta_routes_1.default);
