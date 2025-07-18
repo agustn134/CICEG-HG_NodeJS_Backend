@@ -2797,3 +2797,250 @@ ADD COLUMN IF NOT EXISTS password_texto VARCHAR(100),  -- 🔥 SIN HASH
 ADD COLUMN IF NOT EXISTS ultimo_login TIMESTAMP,
 ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 select * from administrador
+
+
+-- ==========================================
+-- TABLA PARA TOKENS DE RECUPERACIÓN DE CONTRASEÑA
+-- Hospital General San Luis de la Paz
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id_reset_token SERIAL PRIMARY KEY,
+  
+  -- Información del usuario
+  email VARCHAR(255) NOT NULL,
+  tipo_usuario VARCHAR(50) NOT NULL CHECK (tipo_usuario IN ('medico', 'administrador')),
+  id_usuario_referencia INT, -- id_medico o id_administrador según el tipo
+  
+  -- Token de seguridad
+  token VARCHAR(255) NOT NULL UNIQUE,
+  token_hash VARCHAR(255), -- Hash del token para mayor seguridad
+  
+  -- Control de tiempo
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP NULL, -- Cuando se usó el token
+  
+  -- Metadatos de seguridad
+  ip_solicitud INET, -- IP desde donde se solicitó
+  user_agent TEXT, -- Navegador/dispositivo que solicitó
+  attempts_count INT DEFAULT 0, -- Intentos de uso del token
+  
+  -- Control de estado
+  is_active BOOLEAN DEFAULT TRUE,
+  invalidated_reason TEXT, -- Razón si fue invalidado manualmente
+  
+  -- Constraint para evitar duplicados por email activo
+  CONSTRAINT unique_active_email_token UNIQUE(email) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- ==========================================
+-- ÍNDICES PARA OPTIMIZACIÓN
+-- ==========================================
+
+-- Índice principal para búsqueda por token
+CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
+
+-- Índice para búsqueda por email
+CREATE INDEX IF NOT EXISTS idx_password_reset_email ON password_reset_tokens(email);
+
+-- Índice para limpieza de tokens expirados
+CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens(expires_at);
+
+-- Índice para tokens activos
+CREATE INDEX IF NOT EXISTS idx_password_reset_active ON password_reset_tokens(is_active, expires_at) 
+WHERE is_active = TRUE;
+
+-- Índice compuesto para tipo de usuario
+CREATE INDEX IF NOT EXISTS idx_password_reset_user_type ON password_reset_tokens(tipo_usuario, id_usuario_referencia);
+
+-- ==========================================
+-- FUNCIÓN PARA LIMPIAR TOKENS EXPIRADOS
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION limpiar_tokens_expirados()
+RETURNS INT AS $$
+DECLARE
+  tokens_eliminados INT;
+BEGIN
+  -- Marcar como inactivos los tokens expirados
+  UPDATE password_reset_tokens 
+  SET 
+    is_active = FALSE,
+    invalidated_reason = 'Token expirado automáticamente'
+  WHERE expires_at < NOW() 
+    AND is_active = TRUE;
+  
+  GET DIAGNOSTICS tokens_eliminados = ROW_COUNT;
+  
+  -- Eliminar físicamente tokens muy antiguos (más de 7 días)
+  DELETE FROM password_reset_tokens 
+  WHERE created_at < NOW() - INTERVAL '7 days';
+  
+  RETURN tokens_eliminados;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ==========================================
+-- FUNCIÓN PARA VALIDAR TOKEN
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION validar_token_reset(p_token VARCHAR(255))
+RETURNS TABLE(
+  id_reset_token INT,
+  email VARCHAR(255),
+  tipo_usuario VARCHAR(50),
+  id_usuario_referencia INT,
+  is_valid BOOLEAN,
+  tiempo_restante_minutos INT,
+  mensaje TEXT
+) AS $$
+DECLARE
+  token_record RECORD;
+  minutos_restantes INT;
+BEGIN
+  -- Buscar el token
+  SELECT *
+  INTO token_record
+  FROM password_reset_tokens
+  WHERE token = p_token
+    AND is_active = TRUE
+  ORDER BY created_at DESC
+  LIMIT 1;
+  
+  -- Si no existe el token
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT 
+      NULL::INT, 
+      NULL::VARCHAR(255), 
+      NULL::VARCHAR(50), 
+      NULL::INT,
+      FALSE, 
+      0, 
+      'Token no encontrado o inválido'::TEXT;
+    RETURN;
+  END IF;
+  
+  -- Calcular tiempo restante
+  minutos_restantes := EXTRACT(EPOCH FROM (token_record.expires_at - NOW()))/60;
+  
+  -- Verificar si está expirado
+  IF token_record.expires_at < NOW() THEN
+    -- Marcar como inactivo
+    UPDATE password_reset_tokens 
+    SET is_active = FALSE, invalidated_reason = 'Token expirado'
+    WHERE id_reset_token = token_record.id_reset_token;
+    
+    RETURN QUERY SELECT 
+      token_record.id_reset_token, 
+      token_record.email, 
+      token_record.tipo_usuario, 
+      token_record.id_usuario_referencia,
+      FALSE, 
+      0, 
+      'Token expirado'::TEXT;
+    RETURN;
+  END IF;
+  
+  -- Token válido
+  RETURN QUERY SELECT 
+    token_record.id_reset_token, 
+    token_record.email, 
+    token_record.tipo_usuario, 
+    token_record.id_usuario_referencia,
+    TRUE, 
+    minutos_restantes, 
+    'Token válido'::TEXT;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ==========================================
+-- TRIGGER PARA LIMPIAR TOKENS AUTOMÁTICAMENTE
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION trigger_limpiar_tokens()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Cada vez que se inserta un nuevo token, limpiar los expirados
+  PERFORM limpiar_tokens_expirados();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_limpiar_tokens_auto
+  AFTER INSERT ON password_reset_tokens
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION trigger_limpiar_tokens();
+
+-- ==========================================
+-- CONFIGURACIÓN INICIAL
+-- ==========================================
+
+-- Insertar configuración del sistema si no existe
+INSERT INTO configuracion_sistema (parametro, valor, descripcion) VALUES
+  ('password_reset_token_duracion_minutos', '60', 'Duración en minutos de los tokens de recuperación de contraseña'),
+  ('password_reset_max_intentos_dia', '3', 'Máximo número de solicitudes de recuperación por email por día'),
+  ('password_reset_longitud_token', '64', 'Longitud en caracteres del token de recuperación')
+ON CONFLICT (parametro) DO NOTHING;
+
+-- ==========================================
+-- VISTA PARA MONITOREO DE TOKENS
+-- ==========================================
+
+CREATE VIEW vista_tokens_activos AS
+SELECT 
+  prt.id_reset_token,
+  prt.email,
+  prt.tipo_usuario,
+  prt.created_at,
+  prt.expires_at,
+  EXTRACT(EPOCH FROM (prt.expires_at - NOW()))/60 as minutos_restantes,
+  prt.attempts_count,
+  prt.ip_solicitud,
+  CASE 
+    WHEN prt.expires_at < NOW() THEN 'Expirado'
+    WHEN prt.used_at IS NOT NULL THEN 'Usado'
+    WHEN prt.is_active = FALSE THEN 'Inactivo'
+    ELSE 'Activo'
+  END as estado,
+  
+  -- Información del usuario según el tipo
+  CASE 
+    WHEN prt.tipo_usuario = 'medico' THEN 
+      (SELECT CONCAT(p.nombre, ' ', p.apellido_paterno) 
+       FROM personal_medico pm 
+       JOIN persona p ON pm.id_persona = p.id_persona 
+       WHERE pm.id_personal_medico = prt.id_usuario_referencia)
+    WHEN prt.tipo_usuario = 'administrador' THEN 
+      (SELECT CONCAT(p.nombre, ' ', p.apellido_paterno) 
+       FROM administrador a 
+       JOIN persona p ON a.id_persona = p.id_persona 
+       WHERE a.id_administrador = prt.id_usuario_referencia)
+  END as nombre_usuario
+  
+FROM password_reset_tokens prt
+WHERE prt.is_active = TRUE
+ORDER BY prt.created_at DESC;
+
+-- ==========================================
+-- COMENTARIOS DE LA TABLA
+-- ==========================================
+
+COMMENT ON TABLE password_reset_tokens IS 'Tabla para gestionar tokens de recuperación de contraseña del sistema SICEG';
+COMMENT ON COLUMN password_reset_tokens.email IS 'Email del usuario que solicita la recuperación';
+COMMENT ON COLUMN password_reset_tokens.tipo_usuario IS 'Tipo de usuario: medico o administrador';
+COMMENT ON COLUMN password_reset_tokens.token IS 'Token único para la recuperación (URL-safe)';
+COMMENT ON COLUMN password_reset_tokens.expires_at IS 'Fecha y hora de expiración del token';
+COMMENT ON COLUMN password_reset_tokens.attempts_count IS 'Número de intentos de uso del token';
+COMMENT ON FUNCTION validar_token_reset(VARCHAR) IS 'Función para validar un token de recuperación';
+COMMENT ON FUNCTION limpiar_tokens_expirados() IS 'Función para limpiar tokens expirados automáticamente';
+
+-- ==========================================
+-- LIMPIEZA INICIAL
+-- ==========================================
+
+-- Ejecutar limpieza inicial
+SELECT limpiar_tokens_expirados() as tokens_limpiados_inicial;
+
+-- Mensaje de confirmación
+SELECT 'Tabla password_reset_tokens creada exitosamente para SICEG Hospital General San Luis de la Paz' as resultado;
