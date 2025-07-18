@@ -200,95 +200,354 @@ exports.getPersonalMedicoById = getPersonalMedicoById;
 // ==========================================
 // CREAR NUEVO PERSONAL MÉDICO
 // ==========================================
+// export const createPersonalMedico = async (req: Request, res: Response): Promise<Response> => {
+//   try {
+//     const {
+//       id_persona,
+//       numero_cedula,
+//       especialidad,
+//       cargo,
+//       departamento,
+//       activo = true,
+//       foto
+//     } = req.body;
+//     // Validaciones básicas
+//     if (!id_persona) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'El ID de persona es obligatorio'
+//       });
+//     }
+//     if (!numero_cedula || numero_cedula.trim() === '') {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'El número de cédula es obligatorio'
+//       });
+//     }
+//     if (!especialidad || especialidad.trim() === '') {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'La especialidad es obligatoria'
+//       });
+//     }
+//     // Verificar que la persona existe
+//     const personaExisteQuery = `
+//       SELECT id_persona 
+//       FROM persona 
+//       WHERE id_persona = $1
+//     `;
+//     const personaExisteResponse: QueryResult = await pool.query(personaExisteQuery, [id_persona]);
+//     if (personaExisteResponse.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'La persona especificada no existe'
+//       });
+//     }
+//     // Verificar que la persona no tenga ya un registro de personal médico
+//     const yaExisteQuery = `
+//       SELECT id_personal_medico 
+//       FROM personal_medico 
+//       WHERE id_persona = $1
+//     `;
+//     const yaExisteResponse: QueryResult = await pool.query(yaExisteQuery, [id_persona]);
+//     if (yaExisteResponse.rows.length > 0) {
+//       return res.status(409).json({
+//         success: false,
+//         message: 'Esta persona ya tiene un registro como personal médico'
+//       });
+//     }
+//     // Verificar que no exista otra persona con la misma cédula
+//     const cedulaExisteQuery = `
+//       SELECT id_personal_medico 
+//       FROM personal_medico 
+//       WHERE numero_cedula = $1
+//     `;
+//     const cedulaExisteResponse: QueryResult = await pool.query(cedulaExisteQuery, [numero_cedula.trim()]);
+//     if (cedulaExisteResponse.rows.length > 0) {
+//       return res.status(409).json({
+//         success: false,
+//         message: 'Ya existe personal médico con ese número de cédula'
+//       });
+//     }
+//     // Insertar nuevo personal médico
+//     const insertQuery = `
+//       INSERT INTO personal_medico (id_persona, numero_cedula, especialidad, cargo, departamento, activo, foto)
+//       VALUES ($1, $2, $3, $4, $5, $6, $7)
+//       RETURNING *
+//     `;
+//     const response: QueryResult = await pool.query(insertQuery, [
+//       id_persona,
+//       numero_cedula.trim(),
+//       especialidad.trim(),
+//       cargo?.trim() || null,
+//       departamento?.trim() || null,
+//       activo,
+//       foto || null
+//     ]);
+//     return res.status(201).json({
+//       success: true,
+//       message: 'Personal médico creado correctamente',
+//       data: response.rows[0]
+//     });
+//   } catch (error) {
+//     console.error('Error al crear personal médico:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Error interno del servidor al crear personal médico',
+//       error: process.env.NODE_ENV === 'development' ? error : {}
+//     });
+//   }
+// };
+// ==========================================
+// CREAR NUEVO PERSONAL MÉDICO CON CREDENCIALES
+// ==========================================
 const createPersonalMedico = async (req, res) => {
+    const client = await database_1.default.connect();
     try {
-        const { id_persona, numero_cedula, especialidad, cargo, departamento, activo = true, foto } = req.body;
-        // Validaciones básicas
-        if (!id_persona) {
+        await client.query('BEGIN');
+        const { 
+        // Datos de persona
+        persona, 
+        // Datos de personal médico
+        numero_cedula, especialidad, cargo, departamento, activo = true, foto, 
+        // Credenciales de acceso
+        usuario, password_texto } = req.body;
+        console.log('🏥 Creando personal médico completo...', { nombre: persona?.nombre, usuario });
+        // ==========================================
+        // VALIDACIONES BÁSICAS
+        // ==========================================
+        if (!persona || !persona.nombre || !persona.apellido_paterno) {
+            await client.query('ROLLBACK');
             return res.status(400).json({
                 success: false,
-                message: 'El ID de persona es obligatorio'
+                message: 'Los datos básicos de la persona son obligatorios (nombre, apellido paterno)'
             });
         }
         if (!numero_cedula || numero_cedula.trim() === '') {
+            await client.query('ROLLBACK');
             return res.status(400).json({
                 success: false,
                 message: 'El número de cédula es obligatorio'
             });
         }
         if (!especialidad || especialidad.trim() === '') {
+            await client.query('ROLLBACK');
             return res.status(400).json({
                 success: false,
                 message: 'La especialidad es obligatoria'
             });
         }
-        // Verificar que la persona existe
-        const personaExisteQuery = `
-      SELECT id_persona 
-      FROM persona 
-      WHERE id_persona = $1
-    `;
-        const personaExisteResponse = await database_1.default.query(personaExisteQuery, [id_persona]);
-        if (personaExisteResponse.rows.length === 0) {
-            return res.status(404).json({
+        if (!usuario || usuario.trim() === '') {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
                 success: false,
-                message: 'La persona especificada no existe'
+                message: 'El usuario es obligatorio'
             });
         }
-        // Verificar que la persona no tenga ya un registro de personal médico
-        const yaExisteQuery = `
-      SELECT id_personal_medico 
-      FROM personal_medico 
-      WHERE id_persona = $1
-    `;
-        const yaExisteResponse = await database_1.default.query(yaExisteQuery, [id_persona]);
-        if (yaExisteResponse.rows.length > 0) {
-            return res.status(409).json({
+        if (!password_texto || password_texto.length < 6) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
                 success: false,
-                message: 'Esta persona ya tiene un registro como personal médico'
+                message: 'La contraseña debe tener al menos 6 caracteres'
             });
         }
-        // Verificar que no exista otra persona con la misma cédula
-        const cedulaExisteQuery = `
-      SELECT id_personal_medico 
-      FROM personal_medico 
-      WHERE numero_cedula = $1
-    `;
-        const cedulaExisteResponse = await database_1.default.query(cedulaExisteQuery, [numero_cedula.trim()]);
+        // ==========================================
+        // VERIFICAR DUPLICADOS
+        // ==========================================
+        // Verificar CURP duplicado
+        if (persona.curp) {
+            const curpExisteQuery = `SELECT id_persona FROM persona WHERE curp = $1`;
+            const curpExisteResponse = await client.query(curpExisteQuery, [persona.curp]);
+            if (curpExisteResponse.rows.length > 0) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({
+                    success: false,
+                    message: 'Ya existe una persona registrada con este CURP'
+                });
+            }
+        }
+        // Verificar cédula duplicada
+        const cedulaExisteQuery = `SELECT id_personal_medico FROM personal_medico WHERE numero_cedula = $1`;
+        const cedulaExisteResponse = await client.query(cedulaExisteQuery, [numero_cedula.trim()]);
         if (cedulaExisteResponse.rows.length > 0) {
+            await client.query('ROLLBACK');
             return res.status(409).json({
                 success: false,
                 message: 'Ya existe personal médico con ese número de cédula'
             });
         }
-        // Insertar nuevo personal médico
-        const insertQuery = `
-      INSERT INTO personal_medico (id_persona, numero_cedula, especialidad, cargo, departamento, activo, foto)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+        // Verificar usuario duplicado
+        const usuarioExisteQuery = `SELECT id_personal_medico FROM personal_medico WHERE usuario = $1`;
+        const usuarioExisteResponse = await client.query(usuarioExisteQuery, [usuario.trim()]);
+        if (usuarioExisteResponse.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({
+                success: false,
+                message: 'Ya existe un médico con ese nombre de usuario'
+            });
+        }
+        // Verificar email duplicado si se proporciona
+        if (persona.correo_electronico) {
+            const emailExisteQuery = `SELECT id_persona FROM persona WHERE correo_electronico = $1`;
+            const emailExisteResponse = await client.query(emailExisteQuery, [persona.correo_electronico]);
+            if (emailExisteResponse.rows.length > 0) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({
+                    success: false,
+                    message: 'Ya existe una persona registrada con este correo electrónico'
+                });
+            }
+        }
+        // ==========================================
+        // BUSCAR TIPO DE SANGRE ID
+        // ==========================================
+        let tipoSangreId = null;
+        if (persona.tipo_sangre) {
+            const tipoSangreQuery = `SELECT id_tipo_sangre FROM tipo_sangre WHERE nombre = $1`;
+            const tipoSangreResponse = await client.query(tipoSangreQuery, [persona.tipo_sangre]);
+            if (tipoSangreResponse.rows.length > 0) {
+                tipoSangreId = tipoSangreResponse.rows[0].id_tipo_sangre;
+            }
+        }
+        // ==========================================
+        // INSERTAR PERSONA
+        // ==========================================
+        const insertPersonaQuery = `
+      INSERT INTO persona (
+        nombre, 
+        apellido_paterno, 
+        apellido_materno, 
+        fecha_nacimiento, 
+        sexo, 
+        curp, 
+        telefono, 
+        correo_electronico, 
+        domicilio, 
+        estado_civil, 
+        religion,
+        tipo_sangre_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING id_persona, nombre, apellido_paterno, apellido_materno
+    `;
+        const insertPersonaValues = [
+            persona.nombre.trim(),
+            persona.apellido_paterno.trim(),
+            persona.apellido_materno?.trim() || null,
+            persona.fecha_nacimiento,
+            persona.sexo || 'M',
+            persona.curp?.trim() || null,
+            persona.telefono?.trim() || null,
+            persona.correo_electronico?.trim() || null,
+            persona.domicilio?.trim() || null,
+            persona.estado_civil || null,
+            persona.religion?.trim() || null,
+            tipoSangreId
+        ];
+        const personaResponse = await client.query(insertPersonaQuery, insertPersonaValues);
+        const nuevaPersona = personaResponse.rows[0];
+        console.log('✅ Persona creada:', nuevaPersona);
+        // ==========================================
+        // INSERTAR PERSONAL MÉDICO CON CREDENCIALES
+        // ==========================================
+        const insertPersonalMedicoQuery = `
+      INSERT INTO personal_medico (
+        id_persona, 
+        numero_cedula, 
+        especialidad, 
+        cargo, 
+        departamento, 
+        activo, 
+        foto,
+        usuario,
+        password_texto,
+        fecha_actualizacion
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
       RETURNING *
     `;
-        const response = await database_1.default.query(insertQuery, [
-            id_persona,
+        const insertPersonalMedicoValues = [
+            nuevaPersona.id_persona,
             numero_cedula.trim(),
             especialidad.trim(),
             cargo?.trim() || null,
             departamento?.trim() || null,
             activo,
-            foto || null
-        ]);
+            foto || null,
+            usuario.trim(),
+            password_texto // Almacenamos en texto plano como en administrador
+        ];
+        const personalMedicoResponse = await client.query(insertPersonalMedicoQuery, insertPersonalMedicoValues);
+        const nuevoPersonalMedico = personalMedicoResponse.rows[0];
+        console.log('✅ Personal médico creado:', nuevoPersonalMedico);
+        // ==========================================
+        // COMMIT TRANSACCIÓN
+        // ==========================================
+        await client.query('COMMIT');
+        // Combinar datos para respuesta
+        const personalCompletoCreado = {
+            ...nuevoPersonalMedico,
+            nombre: nuevaPersona.nombre,
+            apellido_paterno: nuevaPersona.apellido_paterno,
+            apellido_materno: nuevaPersona.apellido_materno,
+            nombre_completo: `${nuevaPersona.nombre} ${nuevaPersona.apellido_paterno} ${nuevaPersona.apellido_materno || ''}`.trim()
+        };
         return res.status(201).json({
             success: true,
-            message: 'Personal médico creado correctamente',
-            data: response.rows[0]
+            message: `Personal médico Dr.(a) ${personalCompletoCreado.nombre_completo} creado exitosamente con credenciales de acceso`,
+            data: {
+                ...personalCompletoCreado,
+                // No incluir la contraseña en la respuesta por seguridad
+                password_texto: undefined,
+                credenciales: {
+                    usuario: nuevoPersonalMedico.usuario,
+                    mensaje: 'Credenciales creadas correctamente'
+                }
+            }
         });
     }
     catch (error) {
-        console.error('Error al crear personal médico:', error);
+        await client.query('ROLLBACK');
+        console.error('❌ Error al crear personal médico:', error);
+        // 🔥 TYPE ASSERTION - SOLUCIÓN AL ERROR
+        const pgError = error;
+        // Manejo específico de errores de PostgreSQL
+        if (pgError.code === '23505') { // Violation de unique constraint
+            if (pgError.detail?.includes('curp')) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Ya existe una persona registrada con este CURP'
+                });
+            }
+            if (pgError.detail?.includes('numero_cedula')) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Ya existe personal médico con este número de cédula'
+                });
+            }
+            if (pgError.detail?.includes('usuario')) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Ya existe un médico con este nombre de usuario'
+                });
+            }
+            if (pgError.detail?.includes('correo_electronico')) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Ya existe una persona registrada con este correo electrónico'
+                });
+            }
+        }
         return res.status(500).json({
             success: false,
             message: 'Error interno del servidor al crear personal médico',
-            error: process.env.NODE_ENV === 'development' ? error : {}
+            error: process.env.NODE_ENV === 'development' ? {
+                message: pgError.message,
+                code: pgError.code,
+                detail: pgError.detail
+            } : undefined
         });
+    }
+    finally {
+        client.release();
     }
 };
 exports.createPersonalMedico = createPersonalMedico;
