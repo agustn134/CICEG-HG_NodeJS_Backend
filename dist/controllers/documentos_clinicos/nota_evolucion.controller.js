@@ -678,7 +678,7 @@ const getEstadisticasNotasEvolucion = async (req, res) => {
         console.error('Error al obtener estadísticas de notas de evolución:', error);
         return res.status(500).json({
             success: false,
-            message: 'Error interno del servidor al obtener estadísticas',
+            message: 'Error interno del servidor al obtener estadísticas.',
             error: process.env.NODE_ENV === 'development' ? error : {}
         });
     }
