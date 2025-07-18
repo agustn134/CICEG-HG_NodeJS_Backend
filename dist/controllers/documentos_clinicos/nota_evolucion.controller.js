@@ -1,5 +1,5 @@
 "use strict";
-// // src/controllers/documentos_clinicos/nota_evolucion.controller.ts
+// //src/controllers/documentos_clinicos/nota_evolucion.controller.ts
 // import { Request, Response } from 'express';
 // import { QueryResult } from 'pg';
 // import pool from '../../config/database';
@@ -7,10 +7,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteNotaEvolucion = exports.updateNotaEvolucion = exports.getNotaEvolucionById = exports.getNotasEvolucion = exports.getNotaEvolucionByDocumento = exports.getNotasEvolucionByExpediente = exports.createNotaEvolucion = void 0;
+exports.getEstadisticasNotasEvolucion = exports.deleteNotaEvolucion = exports.updateNotaEvolucion = exports.getNotaEvolucionById = exports.getNotasEvolucion = exports.getNotaEvolucionByDocumento = exports.getNotasEvolucionByExpediente = exports.createNotaEvolucion = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 // ==========================================
-// CREAR NUEVA NOTA DE EVOLUCIÓN - CORREGIDO
+// CREAR NUEVA NOTA DE EVOLUCIÓN - CORREGIDO CON GUÍA CLÍNICA
 // ==========================================
 const createNotaEvolucion = async (req, res) => {
     try {
@@ -56,6 +56,22 @@ const createNotaEvolucion = async (req, res) => {
                 message: 'No se puede crear una nota de evolución para un documento anulado'
             });
         }
+        // 🔥 VALIDAR GUÍA CLÍNICA SI SE PROPORCIONA
+        if (requestData.id_guia_diagnostico) {
+            const guiaCheck = await database_1.default.query('SELECT id_guia_diagnostico, activo FROM guia_clinica WHERE id_guia_diagnostico = $1', [requestData.id_guia_diagnostico]);
+            if (guiaCheck.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'La guía clínica especificada no existe'
+                });
+            }
+            if (!guiaCheck.rows[0].activo) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'La guía clínica especificada no está activa'
+                });
+            }
+        }
         // Verificar que no exista ya una nota de evolución para este documento
         const notaExistente = await database_1.default.query('SELECT id_nota_evolucion FROM nota_evolucion WHERE id_documento = $1', [requestData.id_documento]);
         if (notaExistente.rows.length > 0) {
@@ -64,10 +80,11 @@ const createNotaEvolucion = async (req, res) => {
                 message: 'Ya existe una nota de evolución para este documento'
             });
         }
-        // Crear nota de evolución con TODOS los campos de tu BD
+        // 🔥 CREAR NOTA DE EVOLUCIÓN CON GUÍA CLÍNICA
         const query = `
       INSERT INTO nota_evolucion (
         id_documento,
+        id_guia_diagnostico,
         dias_hospitalizacion,
         fecha_ultimo_ingreso,
         temperatura,
@@ -101,12 +118,14 @@ const createNotaEvolucion = async (req, res) => {
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
         $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, 
+        $31, $32
       ) 
       RETURNING *
     `;
         const values = [
             requestData.id_documento,
+            requestData.id_guia_diagnostico || null, // 🔥 AGREGAR ESTE VALOR
             requestData.dias_hospitalizacion || null,
             requestData.fecha_ultimo_ingreso || null,
             requestData.temperatura || null,
@@ -161,7 +180,7 @@ const createNotaEvolucion = async (req, res) => {
 };
 exports.createNotaEvolucion = createNotaEvolucion;
 // ==========================================
-// OBTENER NOTAS DE EVOLUCIÓN POR EXPEDIENTE
+// OBTENER NOTAS DE EVOLUCIÓN POR EXPEDIENTE - CON GUÍA CLÍNICA
 // ==========================================
 const getNotasEvolucionByExpediente = async (req, res) => {
     try {
@@ -183,6 +202,9 @@ const getNotasEvolucionByExpediente = async (req, res) => {
         END as medico_nombre,
         pm_rel.especialidad,
         s.nombre as servicio_nombre,
+        gc.nombre as guia_clinica_nombre,
+        gc.codigo as guia_clinica_codigo,
+        gc.descripcion as guia_clinica_descripcion,
         ROW_NUMBER() OVER (ORDER BY dc.fecha_elaboracion) as numero_evolucion
       FROM nota_evolucion ne
       INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
@@ -190,6 +212,7 @@ const getNotasEvolucionByExpediente = async (req, res) => {
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
       LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
+      LEFT JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
       WHERE dc.id_expediente = $1 
         AND dc.estado != 'Anulado'
       ORDER BY dc.fecha_elaboracion ASC
@@ -212,7 +235,7 @@ const getNotasEvolucionByExpediente = async (req, res) => {
 };
 exports.getNotasEvolucionByExpediente = getNotasEvolucionByExpediente;
 // ==========================================
-// OBTENER NOTA DE EVOLUCIÓN POR DOCUMENTO
+// OBTENER NOTA DE EVOLUCIÓN POR DOCUMENTO - CON GUÍA CLÍNICA
 // ==========================================
 const getNotaEvolucionByDocumento = async (req, res) => {
     try {
@@ -236,7 +259,10 @@ const getNotaEvolucionByDocumento = async (req, res) => {
           THEN pm.nombre || ' ' || pm.apellido_paterno 
           ELSE 'Sin asignar' 
         END as medico_nombre,
-        pm_rel.especialidad
+        pm_rel.especialidad,
+        gc.nombre as guia_clinica_nombre,
+        gc.codigo as guia_clinica_codigo,
+        gc.descripcion as guia_clinica_descripcion
       FROM nota_evolucion ne
       INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
@@ -244,6 +270,7 @@ const getNotaEvolucionByDocumento = async (req, res) => {
       INNER JOIN persona p ON pac.id_persona = p.id_persona
       LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
+      LEFT JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
       WHERE ne.id_documento = $1
     `;
         const response = await database_1.default.query(query, [id_documento]);
@@ -270,7 +297,7 @@ const getNotaEvolucionByDocumento = async (req, res) => {
 };
 exports.getNotaEvolucionByDocumento = getNotaEvolucionByDocumento;
 // ==========================================
-// OBTENER TODAS LAS NOTAS DE EVOLUCIÓN
+// OBTENER TODAS LAS NOTAS DE EVOLUCIÓN - CON GUÍA CLÍNICA
 // ==========================================
 const getNotasEvolucion = async (req, res) => {
     try {
@@ -278,7 +305,7 @@ const getNotasEvolucion = async (req, res) => {
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 10;
         const offset = (pageNum - 1) * limitNum;
-        // Query simplificada que coincide con tu tabla real
+        // Query con guía clínica incluida
         let baseQuery = `
       SELECT 
         ne.*,
@@ -295,7 +322,10 @@ const getNotasEvolucion = async (req, res) => {
           ELSE 'Sin asignar' 
         END as medico_nombre,
         pm_rel.especialidad,
-        s.nombre as servicio_nombre
+        s.nombre as servicio_nombre,
+        gc.nombre as guia_clinica_nombre,
+        gc.codigo as guia_clinica_codigo,
+        gc.descripcion as guia_clinica_descripcion
       FROM nota_evolucion ne
       INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
@@ -305,6 +335,7 @@ const getNotasEvolucion = async (req, res) => {
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
       LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
+      LEFT JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
     `;
         let countQuery = `
       SELECT COUNT(*) as total
@@ -338,7 +369,9 @@ const getNotasEvolucion = async (req, res) => {
         e.numero_expediente ILIKE $${values.length + 1} OR
         (p.nombre || ' ' || p.apellido_paterno || ' ' || COALESCE(p.apellido_materno, '')) ILIKE $${values.length + 1} OR
         ne.sintomas_signos ILIKE $${values.length + 1} OR
-        ne.diagnosticos ILIKE $${values.length + 1}
+        ne.diagnosticos ILIKE $${values.length + 1} OR
+        gc.nombre ILIKE $${values.length + 1} OR
+        gc.codigo ILIKE $${values.length + 1}
       )`);
             values.push(`%${buscar}%`);
         }
@@ -385,7 +418,7 @@ const getNotasEvolucion = async (req, res) => {
 };
 exports.getNotasEvolucion = getNotasEvolucion;
 // ==========================================
-// OBTENER NOTA DE EVOLUCIÓN POR ID
+// OBTENER NOTA DE EVOLUCIÓN POR ID - CON GUÍA CLÍNICA
 // ==========================================
 const getNotaEvolucionById = async (req, res) => {
     try {
@@ -414,7 +447,12 @@ const getNotaEvolucionById = async (req, res) => {
         END as medico_nombre,
         pm_rel.especialidad,
         pm_rel.numero_cedula as cedula_profesional,
-        s.nombre as servicio_nombre
+        s.nombre as servicio_nombre,
+        gc.nombre as guia_clinica_nombre,
+        gc.codigo as guia_clinica_codigo,
+        gc.descripcion as guia_clinica_descripcion,
+        gc.area as guia_clinica_area,
+        gc.fuente as guia_clinica_fuente
       FROM nota_evolucion ne
       INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
       INNER JOIN expediente e ON dc.id_expediente = e.id_expediente
@@ -424,6 +462,7 @@ const getNotaEvolucionById = async (req, res) => {
       LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
       LEFT JOIN internamiento i ON dc.id_internamiento = i.id_internamiento
       LEFT JOIN servicio s ON i.id_servicio = s.id_servicio
+      LEFT JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
       WHERE ne.id_nota_evolucion = $1
     `;
         const response = await database_1.default.query(query, [id]);
@@ -450,7 +489,7 @@ const getNotaEvolucionById = async (req, res) => {
 };
 exports.getNotaEvolucionById = getNotaEvolucionById;
 // ==========================================
-// ACTUALIZAR NOTA DE EVOLUCIÓN
+// ACTUALIZAR NOTA DE EVOLUCIÓN - CON GUÍA CLÍNICA
 // ==========================================
 const updateNotaEvolucion = async (req, res) => {
     try {
@@ -469,6 +508,24 @@ const updateNotaEvolucion = async (req, res) => {
                 success: false,
                 message: 'Nota de evolución no encontrada'
             });
+        }
+        // 🔥 VALIDAR GUÍA CLÍNICA SI SE ACTUALIZA
+        if (updateData.id_guia_diagnostico !== undefined) {
+            if (updateData.id_guia_diagnostico !== null) {
+                const guiaCheck = await database_1.default.query('SELECT id_guia_diagnostico, activo FROM guia_clinica WHERE id_guia_diagnostico = $1', [updateData.id_guia_diagnostico]);
+                if (guiaCheck.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'La guía clínica especificada no existe'
+                    });
+                }
+                if (!guiaCheck.rows[0].activo) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'La guía clínica especificada no está activa'
+                    });
+                }
+            }
         }
         // Construir query dinámico solo con campos proporcionados
         const fields = Object.keys(updateData).filter(key => key !== 'id_documento'); // No permitir cambiar el documento
@@ -554,3 +611,76 @@ const deleteNotaEvolucion = async (req, res) => {
     }
 };
 exports.deleteNotaEvolucion = deleteNotaEvolucion;
+// ==========================================
+// OBTENER ESTADÍSTICAS DE NOTAS DE EVOLUCIÓN
+// ==========================================
+const getEstadisticasNotasEvolucion = async (req, res) => {
+    try {
+        const estadisticasQuery = `
+      SELECT 
+        COUNT(*) as total_notas,
+        COUNT(CASE WHEN dc.estado = 'Activo' THEN 1 END) as notas_activas,
+        COUNT(CASE WHEN dc.estado = 'Anulado' THEN 1 END) as notas_anuladas,
+        COUNT(CASE WHEN ne.id_guia_diagnostico IS NOT NULL THEN 1 END) as notas_con_guia,
+        COUNT(CASE WHEN DATE(dc.fecha_elaboracion) = CURRENT_DATE THEN 1 END) as notas_hoy,
+        COUNT(CASE WHEN DATE(dc.fecha_elaboracion) >= DATE(NOW() - INTERVAL '7 days') THEN 1 END) as notas_ultima_semana,
+        COUNT(CASE WHEN DATE(dc.fecha_elaboracion) >= DATE(NOW() - INTERVAL '30 days') THEN 1 END) as notas_ultimo_mes
+      FROM nota_evolucion ne
+      INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento;
+    `;
+        const guiasUsadasQuery = `
+      SELECT 
+        gc.nombre as guia_nombre,
+        gc.codigo as guia_codigo,
+        COUNT(*) as veces_usada
+      FROM nota_evolucion ne
+      INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento INNER JOIN guia_clinica gc ON ne.id_guia_diagnostico = gc.id_guia_diagnostico
+     WHERE dc.estado = 'Activo'
+     GROUP BY gc.id_guia_diagnostico, gc.nombre, gc.codigo
+     ORDER BY veces_usada DESC
+     LIMIT 10;
+   `;
+        const medicosMasActivosQuery = `
+     SELECT 
+       CASE 
+         WHEN pm_rel.id_personal_medico IS NOT NULL 
+         THEN pm.nombre || ' ' || pm.apellido_paterno 
+         ELSE 'Sin asignar' 
+       END as medico_nombre,
+       pm_rel.especialidad,
+       COUNT(*) as notas_creadas,
+       COUNT(CASE WHEN DATE(dc.fecha_elaboracion) >= DATE(NOW() - INTERVAL '30 days') THEN 1 END) as notas_mes_actual
+     FROM nota_evolucion ne
+     INNER JOIN documento_clinico dc ON ne.id_documento = dc.id_documento
+     LEFT JOIN personal_medico pm_rel ON dc.id_personal_creador = pm_rel.id_personal_medico
+     LEFT JOIN persona pm ON pm_rel.id_persona = pm.id_persona
+     WHERE dc.estado = 'Activo'
+     GROUP BY pm_rel.id_personal_medico, pm.nombre, pm.apellido_paterno, pm_rel.especialidad
+     ORDER BY notas_creadas DESC
+     LIMIT 10;
+   `;
+        const [estadisticas, guiasUsadas, medicosMasActivos] = await Promise.all([
+            database_1.default.query(estadisticasQuery),
+            database_1.default.query(guiasUsadasQuery),
+            database_1.default.query(medicosMasActivosQuery)
+        ]);
+        return res.status(200).json({
+            success: true,
+            message: 'Estadísticas de notas de evolución obtenidas correctamente',
+            data: {
+                resumen: estadisticas.rows[0],
+                guias_mas_usadas: guiasUsadas.rows,
+                medicos_mas_activos: medicosMasActivos.rows
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener estadísticas de notas de evolución:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al obtener estadísticas',
+            error: process.env.NODE_ENV === 'development' ? error : {}
+        });
+    }
+};
+exports.getEstadisticasNotasEvolucion = getEstadisticasNotasEvolucion;

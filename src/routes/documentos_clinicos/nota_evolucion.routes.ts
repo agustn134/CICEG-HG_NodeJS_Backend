@@ -1,44 +1,40 @@
 // src/routes/documentos_clinicos/nota_evolucion.routes.ts
-import { Router } from 'express';
+import { Router } from "express";
 import {
-  createNotaEvolucion,
   getNotasEvolucion,
   getNotaEvolucionById,
+  createNotaEvolucion,
   updateNotaEvolucion,
   deleteNotaEvolucion,
+  getNotaEvolucionByDocumento,
   getNotasEvolucionByExpediente,
-  getNotaEvolucionByDocumento
-} from '../../controllers/documentos_clinicos/nota_evolucion.controller';
+  getEstadisticasNotasEvolucion  // 🔥 AGREGAR ESTA IMPORTACIÓN
+} from "../../controllers/documentos_clinicos/nota_evolucion.controller";
 
 const router = Router();
 
-// ==========================================
-// RUTAS PRINCIPALES
-// ==========================================
+// 🔥 AGREGAR ESTA RUTA (debe ir ANTES que /:id)
+router.get("/estadisticas", getEstadisticasNotasEvolucion);
 
-// GET /api/notas-evolucion - Obtener todas las notas con filtros
-router.get('/', getNotasEvolucion);
+// GET /api/documentos-clinicos/notas-evolucion/documento/:id_documento
+router.get("/documento/:id_documento", getNotaEvolucionByDocumento);
 
-// POST /api/notas-evolucion - Crear nueva nota de evolución
-router.post('/', createNotaEvolucion);
+// GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente  
+router.get("/expediente/:id_expediente", getNotasEvolucionByExpediente);
 
-// GET /api/notas-evolucion/:id - Obtener nota por ID
-router.get('/:id', getNotaEvolucionById);
+// GET /api/documentos-clinicos/notas-evolucion
+router.get("/", getNotasEvolucion);
 
-// PUT /api/notas-evolucion/:id - Actualizar nota por ID
-router.put('/:id', updateNotaEvolucion);
+// GET /api/documentos-clinicos/notas-evolucion/:id
+router.get("/:id", getNotaEvolucionById);
 
-// DELETE /api/notas-evolucion/:id - Anular nota por ID
-router.delete('/:id', deleteNotaEvolucion);
+// POST /api/documentos-clinicos/notas-evolucion
+router.post("/", createNotaEvolucion);
 
-// ==========================================
-// RUTAS ESPECÍFICAS
-// ==========================================
+// PUT /api/documentos-clinicos/notas-evolucion/:id
+router.put("/:id", updateNotaEvolucion);
 
-// GET /api/notas-evolucion/expediente/:id_expediente - Obtener notas por expediente
-router.get('/expediente/:id_expediente', getNotasEvolucionByExpediente);
-
-// GET /api/notas-evolucion/documento/:id_documento - Obtener nota por documento
-router.get('/documento/:id_documento', getNotaEvolucionByDocumento);
+// DELETE /api/documentos-clinicos/notas-evolucion/:id
+router.delete("/:id", deleteNotaEvolucion);
 
 export default router;
