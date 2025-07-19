@@ -23,53 +23,54 @@ export const getExpedientes = async (req: Request, res: Response): Promise<Respo
       offset = 0 
     } = req.query;
     
-    let query = `
-      SELECT 
-        e.id_expediente,
-        e.numero_expediente,
-        e.fecha_apertura,
-        e.estado,
-        e.notas_administrativas,
-        
-        -- Datos del paciente
-        pac.id_paciente,
-        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_paciente,
-        p.fecha_nacimiento,
-        p.sexo,
-        p.curp,
-        edad_en_anos(p.fecha_nacimiento) as edad,
-        ts.nombre as tipo_sangre,
-        
-        -- Estadísticas del expediente
-        COUNT(dc.id_documento) as total_documentos,
-        COUNT(CASE WHEN dc.estado = 'Activo' THEN 1 END) as documentos_activos,
-        COUNT(CASE WHEN dc.fecha_elaboracion >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as documentos_mes_actual,
-        
-        -- Internamientos
-        COUNT(i.id_internamiento) as total_internamientos,
-        COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos,
-        MAX(i.fecha_ingreso) as ultimo_ingreso,
-        
-        -- Servicio actual si hay internamiento activo
-        s.nombre as servicio_actual,
-        c.numero as cama_actual,
-        
-        -- Médico responsable actual
-        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_responsable_actual
-        
-      FROM expediente e
-      JOIN paciente pac ON e.id_paciente = pac.id_paciente
-      JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
-      LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
-      LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
-      LEFT JOIN internamiento i_activo ON e.id_expediente = i_activo.id_expediente AND i_activo.fecha_egreso IS NULL
-      LEFT JOIN servicio s ON i_activo.id_servicio = s.id_servicio
-      LEFT JOIN cama c ON i_activo.id_cama = c.id_cama
-      LEFT JOIN personal_medico pm ON i_activo.id_medico_responsable = pm.id_personal_medico
-      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
-      WHERE 1=1
-    `;
+let query = `
+  SELECT 
+    e.id_expediente,
+    e.numero_expediente,
+    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.fecha_apertura,
+    e.estado,
+    e.notas_administrativas,
+    
+    -- Datos del paciente
+    pac.id_paciente,
+    CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_paciente,
+    p.fecha_nacimiento,
+    p.sexo,
+    p.curp,
+    edad_en_anos(p.fecha_nacimiento) as edad,
+    ts.nombre as tipo_sangre,
+    
+    -- Estadísticas del expediente
+    COUNT(dc.id_documento) as total_documentos,
+    COUNT(CASE WHEN dc.estado = 'Activo' THEN 1 END) as documentos_activos,
+    COUNT(CASE WHEN dc.fecha_elaboracion >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as documentos_mes_actual,
+    
+    -- Internamientos
+    COUNT(i.id_internamiento) as total_internamientos,
+    COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos,
+    MAX(i.fecha_ingreso) as ultimo_ingreso,
+    
+    -- Servicio actual si hay internamiento activo
+    s.nombre as servicio_actual,
+    c.numero as cama_actual,
+    
+    -- Médico responsable actual
+    CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_responsable_actual
+    
+  FROM expediente e
+  JOIN paciente pac ON e.id_paciente = pac.id_paciente
+  JOIN persona p ON pac.id_persona = p.id_persona
+  LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
+  LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
+  LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
+  LEFT JOIN internamiento i_activo ON e.id_expediente = i_activo.id_expediente AND i_activo.fecha_egreso IS NULL
+  LEFT JOIN servicio s ON i_activo.id_servicio = s.id_servicio
+  LEFT JOIN cama c ON i_activo.id_cama = c.id_cama
+  LEFT JOIN personal_medico pm ON i_activo.id_medico_responsable = pm.id_personal_medico
+  LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
+  WHERE 1=1
+`;
     
     const params: any[] = [];
     let paramCounter = 1;
@@ -100,16 +101,17 @@ export const getExpedientes = async (req: Request, res: Response): Promise<Respo
     }
     
     if (buscar) {
-      query += ` AND (
-        UPPER(e.numero_expediente) LIKE UPPER($${paramCounter}) OR
-        UPPER(p.nombre) LIKE UPPER($${paramCounter}) OR 
-        UPPER(p.apellido_paterno) LIKE UPPER($${paramCounter}) OR 
-        UPPER(p.apellido_materno) LIKE UPPER($${paramCounter}) OR
-        UPPER(p.curp) LIKE UPPER($${paramCounter})
-      )`;
-      params.push(`%${buscar}%`);
-      paramCounter++;
-    }
+  query += ` AND (
+    UPPER(e.numero_expediente) LIKE UPPER($${paramCounter}) OR
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${paramCounter}) OR  -- ✅ NUEVO FILTRO
+    UPPER(p.nombre) LIKE UPPER($${paramCounter}) OR 
+    UPPER(p.apellido_paterno) LIKE UPPER($${paramCounter}) OR 
+    UPPER(p.apellido_materno) LIKE UPPER($${paramCounter}) OR
+    UPPER(p.curp) LIKE UPPER($${paramCounter})
+  )`;
+  params.push(`%${buscar}%`);
+  paramCounter++;
+}
     
     query += `
       GROUP BY e.id_expediente, e.numero_expediente, e.fecha_apertura, e.estado, 
@@ -164,15 +166,16 @@ export const getExpedientes = async (req: Request, res: Response): Promise<Respo
       countParamCounter++;
     }
     if (buscar) {
-      countQuery += ` AND (
-        UPPER(e.numero_expediente) LIKE UPPER($${countParamCounter}) OR
-        UPPER(p.nombre) LIKE UPPER($${countParamCounter}) OR 
-        UPPER(p.apellido_paterno) LIKE UPPER($${countParamCounter}) OR 
-        UPPER(p.apellido_materno) LIKE UPPER($${countParamCounter}) OR
-        UPPER(p.curp) LIKE UPPER($${countParamCounter})
-      )`;
-      countParamCounter++;
-    }
+  countQuery += ` AND (
+    UPPER(e.numero_expediente) LIKE UPPER($${countParamCounter}) OR
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${countParamCounter}) OR  -- ✅ NUEVO FILTRO
+    UPPER(p.nombre) LIKE UPPER($${countParamCounter}) OR 
+    UPPER(p.apellido_paterno) LIKE UPPER($${countParamCounter}) OR 
+    UPPER(p.apellido_materno) LIKE UPPER($${countParamCounter}) OR
+    UPPER(p.curp) LIKE UPPER($${countParamCounter})
+  )`;
+  countParamCounter++;
+}
     
     const countResponse: QueryResult = await client.query(countQuery, countParams); // Usar client en lugar de pool
     const totalRecords = parseInt(countResponse.rows[0].total);
@@ -463,28 +466,30 @@ export const buscarExpedientes = async (req: Request, res: Response): Promise<Re
     }
     
     let query = `
-      SELECT 
-        e.id_expediente,
-        e.numero_expediente,
-        e.fecha_apertura,
-        e.estado,
-        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_paciente,
-        p.curp,
-        edad_en_anos(p.fecha_nacimiento) as edad,
-        p.sexo,
-        COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamiento_activo
-      FROM expediente e
-      JOIN paciente pac ON e.id_paciente = pac.id_paciente
-      JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
-      WHERE (
-        UPPER(e.numero_expediente) LIKE UPPER($1) OR
-        UPPER(p.nombre) LIKE UPPER($1) OR 
-        UPPER(p.apellido_paterno) LIKE UPPER($1) OR 
-        UPPER(p.apellido_materno) LIKE UPPER($1) OR
-        UPPER(p.curp) LIKE UPPER($1)
-      )
-    `;
+  SELECT 
+    e.id_expediente,
+    e.numero_expediente,
+    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.fecha_apertura,
+    e.estado,
+    CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_paciente,
+    p.curp,
+    edad_en_anos(p.fecha_nacimiento) as edad,
+    p.sexo,
+    COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamiento_activo
+  FROM expediente e
+  JOIN paciente pac ON e.id_paciente = pac.id_paciente
+  JOIN persona p ON pac.id_persona = p.id_persona
+  LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
+  WHERE (
+    UPPER(e.numero_expediente) LIKE UPPER($1) OR
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($1) OR  -- ✅ NUEVO FILTRO
+    UPPER(p.nombre) LIKE UPPER($1) OR 
+    UPPER(p.apellido_paterno) LIKE UPPER($1) OR 
+    UPPER(p.apellido_materno) LIKE UPPER($1) OR
+    UPPER(p.curp) LIKE UPPER($1)
+  )
+`;
     
     if (activos_solo === 'true') {
       query += ` AND e.estado = 'Activo'`;
@@ -761,63 +766,64 @@ export const getExpedienteById = async (req: Request, res: Response): Promise<Re
     }
     
     // Obtener datos principales del expediente
-    const expedienteQuery = `
-      SELECT 
-        e.id_expediente,
-        e.numero_expediente,
-        e.fecha_apertura,
-        e.estado,
-        e.notas_administrativas,
-        
-        -- Datos del paciente
-        pac.id_paciente,
-        pac.alergias,
-        pac.transfusiones,
-        pac.detalles_transfusiones,
-        pac.familiar_responsable,
-        pac.parentesco_familiar,
-        pac.telefono_familiar,
-        pac.ocupacion,
-        pac.escolaridad,
-        pac.lugar_nacimiento,
-        
-        -- Datos de la persona
-        p.id_persona,
-        p.nombre,
-        p.apellido_paterno,
-        p.apellido_materno,
-        p.fecha_nacimiento,
-        p.sexo,
-        p.curp,
-        p.telefono,
-        p.correo_electronico,
-        p.domicilio,
-        p.estado_civil,
-        p.religion,
-        ts.nombre as tipo_sangre,
-        edad_en_anos(p.fecha_nacimiento) as edad,
-        
-        -- Estadísticas del expediente
-        COUNT(dc.id_documento) as total_documentos,
-        COUNT(CASE WHEN dc.estado = 'Activo' THEN 1 END) as documentos_activos,
-        COUNT(i.id_internamiento) as total_internamientos,
-        COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos
-        
-      FROM expediente e
-      JOIN paciente pac ON e.id_paciente = pac.id_paciente
-      JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
-      LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
-      LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
-      WHERE e.id_expediente = $1
-      GROUP BY e.id_expediente, e.numero_expediente, e.fecha_apertura, e.estado, 
-               e.notas_administrativas, pac.id_paciente, pac.alergias, pac.transfusiones,
-               pac.detalles_transfusiones, pac.familiar_responsable, pac.parentesco_familiar,
-               pac.telefono_familiar, pac.ocupacion, pac.escolaridad, pac.lugar_nacimiento,
-               p.id_persona, p.nombre, p.apellido_paterno, p.apellido_materno, 
-               p.fecha_nacimiento, p.sexo, p.curp, p.telefono, p.correo_electronico, 
-               p.domicilio, p.estado_civil, p.religion, ts.nombre
-    `;
+const expedienteQuery = `
+  SELECT 
+    e.id_expediente,
+    e.numero_expediente,
+    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.fecha_apertura,
+    e.estado,
+    e.notas_administrativas,
+    
+    -- Datos del paciente
+    pac.id_paciente,
+    pac.alergias,
+    pac.transfusiones,
+    pac.detalles_transfusiones,
+    pac.familiar_responsable,
+    pac.parentesco_familiar,
+    pac.telefono_familiar,
+    pac.ocupacion,
+    pac.escolaridad,
+    pac.lugar_nacimiento,
+    
+    -- Datos de la persona
+    p.id_persona,
+    p.nombre,
+    p.apellido_paterno,
+    p.apellido_materno,
+    p.fecha_nacimiento,
+    p.sexo,
+    p.curp,
+    p.telefono,
+    p.correo_electronico,
+    p.domicilio,
+    p.estado_civil,
+    p.religion,
+    ts.nombre as tipo_sangre,
+    edad_en_anos(p.fecha_nacimiento) as edad,
+    
+    -- Estadísticas del expediente
+    COUNT(dc.id_documento) as total_documentos,
+    COUNT(CASE WHEN dc.estado = 'Activo' THEN 1 END) as documentos_activos,
+    COUNT(i.id_internamiento) as total_internamientos,
+    COUNT(CASE WHEN i.fecha_egreso IS NULL THEN 1 END) as internamientos_activos
+    
+  FROM expediente e
+  JOIN paciente pac ON e.id_paciente = pac.id_paciente
+  JOIN persona p ON pac.id_persona = p.id_persona
+  LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
+  LEFT JOIN documento_clinico dc ON e.id_expediente = dc.id_expediente
+  LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
+  WHERE e.id_expediente = $1
+  GROUP BY e.id_expediente, e.numero_expediente, e.numero_expediente_administrativo, e.fecha_apertura, e.estado, 
+           e.notas_administrativas, pac.id_paciente, pac.alergias, pac.transfusiones,
+           pac.detalles_transfusiones, pac.familiar_responsable, pac.parentesco_familiar,
+           pac.telefono_familiar, pac.ocupacion, pac.escolaridad, pac.lugar_nacimiento,
+           p.id_persona, p.nombre, p.apellido_paterno, p.apellido_materno, 
+           p.fecha_nacimiento, p.sexo, p.curp, p.telefono, p.correo_electronico, 
+           p.domicilio, p.estado_civil, p.religion, ts.nombre
+`;
     
     const expedienteResponse: QueryResult = await pool.query(expedienteQuery, [id]);
     
@@ -965,13 +971,14 @@ export const createExpediente = async (req: Request, res: Response): Promise<Res
     await client.query('BEGIN');
     
     const {
-      id_paciente,
-      numero_expediente,
-      estado = 'Activo',
-      notas_administrativas,
-      crear_historia_clinica = false,
-      id_medico_creador
-    } = req.body;
+  id_paciente,
+  numero_expediente,
+  numero_expediente_administrativo,  // ✅ NUEVO CAMPO
+  estado = 'Activo',
+  notas_administrativas,
+  crear_historia_clinica = false,
+  id_medico_creador
+} = req.body;
     
     // Validaciones básicas
     if (!id_paciente) {
@@ -1038,19 +1045,19 @@ export const createExpediente = async (req: Request, res: Response): Promise<Res
       });
     }
     
-    // Insertar nuevo expediente
     const insertExpedienteQuery = `
-      INSERT INTO expediente (id_paciente, numero_expediente, estado, notas_administrativas)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `;
+  INSERT INTO expediente (id_paciente, numero_expediente, numero_expediente_administrativo, estado, notas_administrativas)
+  VALUES ($1, $2, $3, $4, $5)
+  RETURNING *
+`;
     
     const expedienteResponse: QueryResult = await client.query(insertExpedienteQuery, [
-      id_paciente,
-      numeroExpedienteFinal,
-      estado,
-      notas_administrativas?.trim() || null
-    ]);
+  id_paciente,
+  numeroExpedienteFinal,
+  numero_expediente_administrativo?.trim() || null,  // ✅ NUEVO PARÁMETRO
+  estado,
+  notas_administrativas?.trim() || null
+]);
     
     const nuevoExpediente = expedienteResponse.rows[0];
     
@@ -1150,6 +1157,9 @@ export const createExpediente = async (req: Request, res: Response): Promise<Res
   }
 };
 
+
+
+
 // ==========================================
 // ACTUALIZAR EXPEDIENTE
 // ==========================================
@@ -1161,10 +1171,12 @@ export const updateExpediente = async (req: Request, res: Response): Promise<Res
     
     const { id } = req.params;
     const {
-      estado,
-      notas_administrativas,
-      id_medico_modificador
-    } = req.body;
+  estado,
+  numero_expediente_administrativo,  // ✅ NUEVO CAMPO
+  notas_administrativas,
+  id_medico_modificador
+} = req.body;
+
     
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({
@@ -1229,20 +1241,22 @@ export const updateExpediente = async (req: Request, res: Response): Promise<Res
     }
     
     // Actualizar expediente
-    const updateQuery = `
-      UPDATE expediente 
-      SET 
-        estado = COALESCE($1, estado),
-        notas_administrativas = COALESCE($2, notas_administrativas)
-      WHERE id_expediente = $3
-      RETURNING *
-    `;
+   const updateQuery = `
+  UPDATE expediente 
+  SET 
+    estado = COALESCE($1, estado),
+    numero_expediente_administrativo = COALESCE($2, numero_expediente_administrativo),  -- ✅ NUEVO CAMPO
+    notas_administrativas = COALESCE($3, notas_administrativas)
+  WHERE id_expediente = $4
+  RETURNING *
+`;
     
     const response: QueryResult = await client.query(updateQuery, [
-      estado || null,
-      notas_administrativas?.trim() || null,
-      id
-    ]);
+  estado || null,
+  numero_expediente_administrativo?.trim() || null,  // ✅ NUEVO PARÁMETRO
+  notas_administrativas?.trim() || null,
+  id
+]);
     
     // Registrar auditoría
     await client.query(
@@ -1876,48 +1890,49 @@ export const getExpedienteByPacienteId = async (req: Request, res: Response): Pr
   try {
     const { pacienteId } = req.params;
     
-    const query = `
-      SELECT 
-        e.id_expediente,
-        e.numero_expediente,
-        e.fecha_apertura,
-        e.estado,
-        e.notas_administrativas,
-        
-        -- Datos del paciente
-        pac.id_paciente,
-        CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as nombre_paciente,
-        p.fecha_nacimiento,
-        p.sexo,
-        p.curp,
-        EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
-        ts.nombre as tipo_sangre,
-        
-        -- Estadísticas del expediente
-        (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente) as total_documentos,
-        (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente AND dc.estado = 'Activo') as documentos_activos,
-        (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente) as total_internamientos,
-        (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente AND i.fecha_egreso IS NULL) as internamientos_activos,
-        
-        -- Información del internamiento activo (si existe)
-        i_activo.id_internamiento as internamiento_activo_id,
-        s.nombre as servicio_actual,
-        c.numero as cama_actual,
-        CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_responsable_actual
-        
-      FROM expediente e
-      JOIN paciente pac ON e.id_paciente = pac.id_paciente
-      JOIN persona p ON pac.id_persona = p.id_persona
-      LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
-      LEFT JOIN internamiento i_activo ON e.id_expediente = i_activo.id_expediente AND i_activo.fecha_egreso IS NULL
-      LEFT JOIN servicio s ON i_activo.id_servicio = s.id_servicio
-      LEFT JOIN cama c ON i_activo.id_cama = c.id_cama
-      LEFT JOIN personal_medico pm ON i_activo.id_medico_responsable = pm.id_personal_medico
-      LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
-      WHERE pac.id_paciente = $1
-      ORDER BY e.fecha_apertura DESC
-      LIMIT 1
-    `;
+   const query = `
+  SELECT 
+    e.id_expediente,
+    e.numero_expediente,
+    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.fecha_apertura,
+    e.estado,
+    e.notas_administrativas,
+    
+    -- Datos del paciente
+    pac.id_paciente,
+    CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as nombre_paciente,
+    p.fecha_nacimiento,
+    p.sexo,
+    p.curp,
+    EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
+    ts.nombre as tipo_sangre,
+    
+    -- Estadísticas del expediente
+    (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente) as total_documentos,
+    (SELECT COUNT(*) FROM documento_clinico dc WHERE dc.id_expediente = e.id_expediente AND dc.estado = 'Activo') as documentos_activos,
+    (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente) as total_internamientos,
+    (SELECT COUNT(*) FROM internamiento i WHERE i.id_expediente = e.id_expediente AND i.fecha_egreso IS NULL) as internamientos_activos,
+    
+    -- Información del internamiento activo (si existe)
+    i_activo.id_internamiento as internamiento_activo_id,
+    s.nombre as servicio_actual,
+    c.numero as cama_actual,
+    CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_responsable_actual
+    
+  FROM expediente e
+  JOIN paciente pac ON e.id_paciente = pac.id_paciente
+  JOIN persona p ON pac.id_persona = p.id_persona
+  LEFT JOIN tipo_sangre ts ON p.tipo_sangre_id = ts.id_tipo_sangre
+  LEFT JOIN internamiento i_activo ON e.id_expediente = i_activo.id_expediente AND i_activo.fecha_egreso IS NULL
+  LEFT JOIN servicio s ON i_activo.id_servicio = s.id_servicio
+  LEFT JOIN cama c ON i_activo.id_cama = c.id_cama
+  LEFT JOIN personal_medico pm ON i_activo.id_medico_responsable = pm.id_personal_medico
+  LEFT JOIN persona pm_p ON pm.id_persona = pm_p.id_persona
+  WHERE pac.id_paciente = $1
+  ORDER BY e.fecha_apertura DESC
+  LIMIT 1
+`;
     
     const result = await pool.query(query, [pacienteId]);
     
@@ -1932,30 +1947,31 @@ export const getExpedienteByPacienteId = async (req: Request, res: Response): Pr
     const expedienteData = result.rows[0];
     
     const response = {
-      success: true,
-      message: 'Expediente obtenido exitosamente',
-      data: {
-        id_expediente: expedienteData.id_expediente,
-        numero_expediente: expedienteData.numero_expediente,
-        fecha_apertura: expedienteData.fecha_apertura,
-        estado: expedienteData.estado,
-        notas_administrativas: expedienteData.notas_administrativas,
-        id_paciente: expedienteData.id_paciente,
-        nombre_paciente: expedienteData.nombre_paciente,
-        fecha_nacimiento: expedienteData.fecha_nacimiento,
-        sexo: expedienteData.sexo,
-        curp: expedienteData.curp,
-        edad: expedienteData.edad,
-        tipo_sangre: expedienteData.tipo_sangre,
-        total_documentos: expedienteData.total_documentos,
-        documentos_activos: expedienteData.documentos_activos,
-        total_internamientos: expedienteData.total_internamientos,
-        internamientos_activos: expedienteData.internamientos_activos,
-        servicio_actual: expedienteData.servicio_actual,
-        cama_actual: expedienteData.cama_actual,
-        medico_responsable_actual: expedienteData.medico_responsable_actual
-      }
-    };
+  success: true,
+  message: 'Expediente obtenido exitosamente',
+  data: {
+    id_expediente: expedienteData.id_expediente,
+    numero_expediente: expedienteData.numero_expediente,
+    numero_expediente_administrativo: expedienteData.numero_expediente_administrativo,  // ✅ NUEVO CAMPO
+    fecha_apertura: expedienteData.fecha_apertura,
+    estado: expedienteData.estado,
+    notas_administrativas: expedienteData.notas_administrativas,
+    id_paciente: expedienteData.id_paciente,
+    nombre_paciente: expedienteData.nombre_paciente,
+    fecha_nacimiento: expedienteData.fecha_nacimiento,
+    sexo: expedienteData.sexo,
+    curp: expedienteData.curp,
+    edad: expedienteData.edad,
+    tipo_sangre: expedienteData.tipo_sangre,
+    total_documentos: expedienteData.total_documentos,
+    documentos_activos: expedienteData.documentos_activos,
+    total_internamientos: expedienteData.total_internamientos,
+    internamientos_activos: expedienteData.internamientos_activos,
+    servicio_actual: expedienteData.servicio_actual,
+    cama_actual: expedienteData.cama_actual,
+    medico_responsable_actual: expedienteData.medico_responsable_actual
+  }
+};
     
     res.status(200).json(response);
     

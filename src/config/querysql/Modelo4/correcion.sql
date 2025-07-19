@@ -3053,3 +3053,28 @@ DROP CONSTRAINT IF EXISTS unique_active_email_token;
 -- Crear un constraint único normal
 ALTER TABLE password_reset_tokens 
 ADD CONSTRAINT unique_active_email_token UNIQUE(email);
+
+
+-- ==========================================
+-- AGREGAR CAMPO EXPEDIENTE ADMINISTRATIVO
+-- ==========================================
+
+-- 1. Agregar el nuevo campo a la tabla expediente
+ALTER TABLE expediente 
+ADD COLUMN numero_expediente_administrativo TEXT;
+
+-- 2. Crear índice para búsquedas rápidas por número administrativo
+CREATE INDEX idx_expediente_administrativo 
+ON expediente(numero_expediente_administrativo);
+
+-- 3. Agregar comentarios descriptivos
+COMMENT ON COLUMN expediente.numero_expediente 
+IS 'Número de expediente generado automáticamente por el sistema';
+
+COMMENT ON COLUMN expediente.numero_expediente_administrativo 
+IS 'Número de expediente asignado manualmente por el área de expedientes clínicos';
+
+-- 4. Opcional: Crear constraint para evitar duplicados (si se requiere único)
+-- ALTER TABLE expediente 
+-- ADD CONSTRAINT uk_expediente_administrativo 
+-- UNIQUE (numero_expediente_administrativo);
