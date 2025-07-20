@@ -7,19 +7,19 @@ import {
   updateNotaEvolucion,
   deleteNotaEvolucion,
   getNotaEvolucionByDocumento,
-  getNotasEvolucionByExpediente,
-  getEstadisticasNotasEvolucion  // 🔥 AGREGAR ESTA IMPORTACIÓN
+  getNotasEvolucionByExpediente
+  // 🔥 ELIMINAR: getEstadisticasNotasEvolucion
 } from "../../controllers/documentos_clinicos/nota_evolucion.controller";
 
 const router = Router();
 
-// 🔥 AGREGAR ESTA RUTA (debe ir ANTES que /:id)
-router.get("/estadisticas", getEstadisticasNotasEvolucion);
+// 🔥 ELIMINAR ESTA LÍNEA:
+// router.get("/estadisticas", getEstadisticasNotasEvolucion);
 
 // GET /api/documentos-clinicos/notas-evolucion/documento/:id_documento
 router.get("/documento/:id_documento", getNotaEvolucionByDocumento);
 
-// GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente  
+// GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente
 router.get("/expediente/:id_expediente", getNotasEvolucionByExpediente);
 
 // GET /api/documentos-clinicos/notas-evolucion

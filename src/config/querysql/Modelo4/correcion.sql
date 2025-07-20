@@ -3078,3 +3078,18 @@ IS 'Número de expediente asignado manualmente por el área de expedientes clín
 -- ALTER TABLE expediente 
 -- ADD CONSTRAINT uk_expediente_administrativo 
 -- UNIQUE (numero_expediente_administrativo);
+
+
+-- Agregar la columna id_guia_diagnostico a la tabla nota_evolucion
+ALTER TABLE nota_evolucion 
+ADD COLUMN id_guia_diagnostico INTEGER;
+
+-- Agregar la foreign key constraint
+ALTER TABLE nota_evolucion 
+ADD CONSTRAINT fk_nota_evolucion_guia_clinica 
+FOREIGN KEY (id_guia_diagnostico) REFERENCES guia_clinica(id_guia_diagnostico);
+
+-- -- Verificar que se agregó correctamente
+-- \d nota_evolucion;
+
+-- select * from nota_evolucion

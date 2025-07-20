@@ -4,11 +4,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const nota_evolucion_controller_1 = require("../../controllers/documentos_clinicos/nota_evolucion.controller");
 const router = (0, express_1.Router)();
-// 🔥 AGREGAR ESTA RUTA (debe ir ANTES que /:id)
-router.get("/estadisticas", nota_evolucion_controller_1.getEstadisticasNotasEvolucion);
+// 🔥 ELIMINAR ESTA LÍNEA:
+// router.get("/estadisticas", getEstadisticasNotasEvolucion);
 // GET /api/documentos-clinicos/notas-evolucion/documento/:id_documento
 router.get("/documento/:id_documento", nota_evolucion_controller_1.getNotaEvolucionByDocumento);
-// GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente  
+// GET /api/documentos-clinicos/notas-evolucion/expediente/:id_expediente
 router.get("/expediente/:id_expediente", nota_evolucion_controller_1.getNotasEvolucionByExpediente);
 // GET /api/documentos-clinicos/notas-evolucion
 router.get("/", nota_evolucion_controller_1.getNotasEvolucion);
