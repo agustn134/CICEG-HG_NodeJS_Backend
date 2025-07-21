@@ -249,22 +249,6 @@ export const createNotaEvolucion = async (req: Request, res: Response): Promise<
       data: response.rows[0]
     });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   } catch (error: any) {
     console.error('❌ Error completo en createNotaEvolucion:', error);
     console.error('❌ Error message:', error.message);

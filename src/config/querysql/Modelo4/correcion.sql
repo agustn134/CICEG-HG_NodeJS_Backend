@@ -3093,3 +3093,27 @@ FOREIGN KEY (id_guia_diagnostico) REFERENCES guia_clinica(id_guia_diagnostico);
 -- \d nota_evolucion;
 
 -- select * from nota_evolucion
+
+
+
+-- Campos adicionales para completar NOM-004 D11
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS fecha_cirugia DATE;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS hora_inicio TIME;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS hora_termino TIME;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS quirofano VARCHAR(20);
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS procedimiento_realizado TEXT;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS clasificacion_asa VARCHAR(10);
+
+-- Signos vitales al egreso (D11.16)
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS presion_arterial_egreso VARCHAR(20);
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS frecuencia_cardiaca_egreso INTEGER;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS frecuencia_respiratoria_egreso INTEGER;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS saturacion_oxigeno_egreso INTEGER;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS temperatura_egreso DECIMAL(4,1);
+
+-- Escala Aldrete
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS aldrete_actividad INTEGER DEFAULT 2;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS aldrete_respiracion INTEGER DEFAULT 2;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS aldrete_circulacion INTEGER DEFAULT 2;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS aldrete_conciencia INTEGER DEFAULT 2;
+ALTER TABLE nota_postanestesica ADD COLUMN IF NOT EXISTS aldrete_saturacion INTEGER DEFAULT 2;
