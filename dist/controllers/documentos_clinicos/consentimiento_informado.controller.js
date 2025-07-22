@@ -35,7 +35,7 @@ const getConsentimientos = async (req, res) => {
         let paramCounter = 1;
         // Filtros
         if (id_expediente) {
-            query += ` AND ci.id_expediente = $${paramCounter}`;
+            query += ` AND e.id_expediente = $${paramCounter}`;
             params.push(id_expediente);
             paramCounter++;
         }
