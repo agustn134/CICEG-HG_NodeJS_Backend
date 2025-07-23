@@ -1022,61 +1022,34 @@ const getEstadisticasCamas = async (req, res) => {
             camasPorEstado: `
         SELECT 
           estado,
-          COUNT(*) as cantidad,
-          ROUND((COUNT(*)::decimal / (SELECT COUNT(*) FROM cama)) * 100, 2) as porcentaje
+          COUNT(*) as cantidad
         FROM cama
         GROUP BY estado
         ORDER BY cantidad DESC
       `,
-            camasPorServicio: `
-        SELECT 
-          s.nombre as servicio,
-          COUNT(c.id_cama) as total_camas,
-          COUNT(CASE WHEN c.estado = 'Disponible' THEN 1 END) as disponibles,
-          COUNT(CASE WHEN c.estado = 'Ocupada' THEN 1 END) as ocupadas,
-          ROUND(
-            (COUNT(CASE WHEN c.estado = 'Ocupada' THEN 1 END)::decimal / COUNT(c.id_cama)) * 100, 2
-          ) as porcentaje_ocupacion
-        FROM servicio s
-        LEFT JOIN cama c ON s.id_servicio = c.id_servicio
-        WHERE s.activo = true
-        GROUP BY s.id_servicio, s.nombre
-        ORDER BY total_camas DESC
-      `,
             camasPorArea: `
         SELECT 
-          area,
+          COALESCE(area, 'Sin área') as area,
           COUNT(*) as total_camas,
           COUNT(CASE WHEN estado = 'Disponible' THEN 1 END) as disponibles,
           COUNT(CASE WHEN estado = 'Ocupada' THEN 1 END) as ocupadas
         FROM cama
         GROUP BY area
         ORDER BY total_camas DESC
-      `,
-            promedioOcupacion: `
-        SELECT 
-          ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(i.fecha_egreso, CURRENT_TIMESTAMP) - i.fecha_ingreso))/86400), 2) as promedio_dias_estancia,
-          COUNT(i.id_internamiento) as total_internamientos_historicos
-        FROM internamiento i
-        WHERE i.fecha_ingreso >= NOW() - INTERVAL '6 months'
       `
         };
-        const [total, estados, servicios, areas, ocupacion] = await Promise.all([
+        const [total, estados, areas] = await Promise.all([
             database_1.default.query(queries.totalCamas),
             database_1.default.query(queries.camasPorEstado),
-            database_1.default.query(queries.camasPorServicio),
-            database_1.default.query(queries.camasPorArea),
-            database_1.default.query(queries.promedioOcupacion)
+            database_1.default.query(queries.camasPorArea)
         ]);
         return res.status(200).json({
             success: true,
-            message: 'Estadísticas de camas obtenidas correctamente',
+            message: 'Estadísticas básicas de camas obtenidas correctamente',
             data: {
                 total_camas: parseInt(total.rows[0].total),
                 distribucion_por_estado: estados.rows,
-                camas_por_servicio: servicios.rows,
-                camas_por_area: areas.rows,
-                estadisticas_ocupacion: ocupacion.rows[0]
+                camas_por_area: areas.rows
             }
         });
     }
