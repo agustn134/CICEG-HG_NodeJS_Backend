@@ -1,1 +1,14 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const vacunas_adicionales_controller_1 = require("../../controllers/pediatria/vacunas_adicionales.controller");
+const router = (0, express_1.Router)();
+router.post('/', vacunas_adicionales_controller_1.VacunasAdicionalesController.agregar);
+router.get('/inmunizacion/:id_inmunizacion', vacunas_adicionales_controller_1.VacunasAdicionalesController.obtenerPorInmunizacion);
+router.get('/catalogo', vacunas_adicionales_controller_1.VacunasAdicionalesController.obtenerCatalogo);
+router.get('/buscar', vacunas_adicionales_controller_1.VacunasAdicionalesController.buscarVacunas);
+router.get('/reporte', vacunas_adicionales_controller_1.VacunasAdicionalesController.obtenerReporte);
+router.post('/catalogo', vacunas_adicionales_controller_1.VacunasAdicionalesController.agregarAlCatalogo);
+router.put('/:id', vacunas_adicionales_controller_1.VacunasAdicionalesController.actualizar);
+router.delete('/:id', vacunas_adicionales_controller_1.VacunasAdicionalesController.eliminar);
+exports.default = router;

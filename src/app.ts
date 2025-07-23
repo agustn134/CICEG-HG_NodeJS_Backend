@@ -89,6 +89,15 @@ import registroTransfusionRoutes from './routes/documentos_clinicos/registro_tra
 import notaPsicologiaRoutes from './routes/notas_especializadas/nota_psicologia.routes';
 import notaNutricionRoutes from './routes/notas_especializadas/nota_nutricion.routes';
 import authRoutes from './controllers/auth/auth.routes';
+
+// ===== Pediatría =====
+import antecedentesHeredoFamiliaresRoutes from './routes/pediatria/antecedentes_heredo_familiares.routes';
+import antecedentesPerinatalesRoutes from './routes/pediatria/antecedentes_perinatales.routes';
+import desarrolloPsicomotrizRoutes from './routes/pediatria/desarrollo_psicomotriz.routes';
+import inmunizacionesRoutes from './routes/pediatria/inmunizaciones.routes';
+import vacunasAdicionalesRoutes from './routes/pediatria/vacunas_adicionales.routes';
+import estadoNutricionalPediatricoRoutes from './routes/pediatria/estado_nutricional_pediatrico.routes';
+import dashboardPediatricoRoutes from './routes/pediatria/dashboard_pediatrico.routes';
 // ==========================================
 // RUTA PRINCIPAL DE INFORMACIÓN DEL SISTEMA
 // ==========================================
@@ -108,7 +117,8 @@ app.get('/', (req, res) => {
         personas: '/api/personas/*',
         expedientes: '/api/gestion-expedientes/*',
         documentos_clinicos: '/api/documentos-clinicos/*',
-        notas_especializadas: '/api/notas-especializadas/*'
+        notas_especializadas: '/api/notas-especializadas/*',
+        pediatria: '/api/pediatria/*'
       }
     },
     contacto: {
@@ -146,11 +156,12 @@ app.get('/api/sistema/info', (req, res) => {
       personas: 'Gestión de pacientes, personal médico y administrativo',
       expedientes: 'Control de expedientes clínicos',
       documentos_clinicos: 'Gestión de documentos médicos',
-      notas_especializadas: 'Notas de psicología y nutrición'
+      notas_especializadas: 'Notas de psicología y nutrición',
+      pediatria: 'Gestión de antecedentes, desarrollo, inmunizaciones y estado nutricional pediátrico'
     },
     estadisticas: {
-      endpoints_disponibles: 50, 
-      modulos_activos: 5,
+      endpoints_disponibles: 57, 
+      modulos_activos: 6,
       ultima_actualizacion: new Date().toISOString()
     },
     legado: {
@@ -263,6 +274,16 @@ app.use('/api/documentos-clinicos/registros-transfusion', registroTransfusionRou
 // ===== NOTAS ESPECIALIZADAS =====
 app.use('/api/notas-especializadas/notas-psicologia', notaPsicologiaRoutes);
 app.use('/api/notas-especializadas/notas-nutricion', notaNutricionRoutes);
+
+// ===== PEDIATRÍA =====
+app.use('/api/pediatria/antecedentes-heredo-familiares', antecedentesHeredoFamiliaresRoutes);
+app.use('/api/pediatria/antecedentes-perinatales', antecedentesPerinatalesRoutes);
+app.use('/api/pediatria/desarrollo-psicomotriz', desarrolloPsicomotrizRoutes);
+app.use('/api/pediatria/inmunizaciones', inmunizacionesRoutes);
+app.use('/api/pediatria/vacunas-adicionales', vacunasAdicionalesRoutes);
+app.use('/api/pediatria/estado-nutricional', estadoNutricionalPediatricoRoutes);
+app.use('/api/pediatria/dashboard', dashboardPediatricoRoutes);
+
 app.use('/api/configuracion', configuracionRoutes);
 // ==========================================
 // MIDDLEWARE PARA LOGGING DE REQUESTS (DESARROLLO)

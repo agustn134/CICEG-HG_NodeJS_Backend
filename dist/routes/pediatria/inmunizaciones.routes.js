@@ -1,5 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const inmunizaciones_controller_1 = require("../../controllers/pediatria/inmunizaciones.controller");
 const router = (0, express_1.Router)();
+router.post('/', inmunizaciones_controller_1.InmunizacionesController.crear);
+router.get('/esquema-completo/:id_historia_clinica', inmunizaciones_controller_1.InmunizacionesController.obtenerEsquemaCompleto);
+router.get('/historial/:id_inmunizacion', inmunizaciones_controller_1.InmunizacionesController.obtenerHistorialCompleto);
+router.get('/verificar-completitud/:id_inmunizacion', inmunizaciones_controller_1.InmunizacionesController.verificarCompletitud);
+router.get('/proximas-vacunas/:id_inmunizacion', inmunizaciones_controller_1.InmunizacionesController.obtenerProximasVacunas);
+router.put('/:id', inmunizaciones_controller_1.InmunizacionesController.actualizar);
+router.delete('/:id', inmunizaciones_controller_1.InmunizacionesController.eliminar);
 exports.default = router;

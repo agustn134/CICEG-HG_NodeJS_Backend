@@ -1,5 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const estado_nutricional_pediatrico_controller_1 = require("../../controllers/pediatria/estado_nutricional_pediatrico.controller");
 const router = (0, express_1.Router)();
+router.post('/', estado_nutricional_pediatrico_controller_1.EstadoNutricionalPediatricoController.crear);
+router.get('/historia-clinica/:id_historia_clinica', estado_nutricional_pediatrico_controller_1.EstadoNutricionalPediatricoController.obtenerPorHistoriaClinica);
+router.get('/alertas', estado_nutricional_pediatrico_controller_1.EstadoNutricionalPediatricoController.obtenerAlertasNutricionales);
+router.post('/calcular-percentiles', estado_nutricional_pediatrico_controller_1.EstadoNutricionalPediatricoController.calcularPercentiles);
+router.put('/:id', estado_nutricional_pediatrico_controller_1.EstadoNutricionalPediatricoController.actualizar);
+router.delete('/:id', estado_nutricional_pediatrico_controller_1.EstadoNutricionalPediatricoController.eliminar);
 exports.default = router;

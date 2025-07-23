@@ -84,6 +84,14 @@ const registro_transfusion_routes_1 = __importDefault(require("./routes/document
 const nota_psicologia_routes_1 = __importDefault(require("./routes/notas_especializadas/nota_psicologia.routes"));
 const nota_nutricion_routes_1 = __importDefault(require("./routes/notas_especializadas/nota_nutricion.routes"));
 const auth_routes_1 = __importDefault(require("./controllers/auth/auth.routes"));
+// ===== Pediatría =====
+const antecedentes_heredo_familiares_routes_1 = __importDefault(require("./routes/pediatria/antecedentes_heredo_familiares.routes"));
+const antecedentes_perinatales_routes_1 = __importDefault(require("./routes/pediatria/antecedentes_perinatales.routes"));
+const desarrollo_psicomotriz_routes_1 = __importDefault(require("./routes/pediatria/desarrollo_psicomotriz.routes"));
+const inmunizaciones_routes_1 = __importDefault(require("./routes/pediatria/inmunizaciones.routes"));
+const vacunas_adicionales_routes_1 = __importDefault(require("./routes/pediatria/vacunas_adicionales.routes"));
+const estado_nutricional_pediatrico_routes_1 = __importDefault(require("./routes/pediatria/estado_nutricional_pediatrico.routes"));
+const dashboard_pediatrico_routes_1 = __importDefault(require("./routes/pediatria/dashboard_pediatrico.routes"));
 // ==========================================
 // RUTA PRINCIPAL DE INFORMACIÓN DEL SISTEMA
 // ==========================================
@@ -103,7 +111,8 @@ app.get('/', (req, res) => {
                 personas: '/api/personas/*',
                 expedientes: '/api/gestion-expedientes/*',
                 documentos_clinicos: '/api/documentos-clinicos/*',
-                notas_especializadas: '/api/notas-especializadas/*'
+                notas_especializadas: '/api/notas-especializadas/*',
+                pediatria: '/api/pediatria/*'
             }
         },
         contacto: {
@@ -139,11 +148,12 @@ app.get('/api/sistema/info', (req, res) => {
             personas: 'Gestión de pacientes, personal médico y administrativo',
             expedientes: 'Control de expedientes clínicos',
             documentos_clinicos: 'Gestión de documentos médicos',
-            notas_especializadas: 'Notas de psicología y nutrición'
+            notas_especializadas: 'Notas de psicología y nutrición',
+            pediatria: 'Gestión de antecedentes, desarrollo, inmunizaciones y estado nutricional pediátrico'
         },
         estadisticas: {
-            endpoints_disponibles: 50,
-            modulos_activos: 5,
+            endpoints_disponibles: 57,
+            modulos_activos: 6,
             ultima_actualizacion: new Date().toISOString()
         },
         legado: {
@@ -246,6 +256,14 @@ app.use('/api/documentos-clinicos/registros-transfusion', registro_transfusion_r
 // ===== NOTAS ESPECIALIZADAS =====
 app.use('/api/notas-especializadas/notas-psicologia', nota_psicologia_routes_1.default);
 app.use('/api/notas-especializadas/notas-nutricion', nota_nutricion_routes_1.default);
+// ===== PEDIATRÍA =====
+app.use('/api/pediatria/antecedentes-heredo-familiares', antecedentes_heredo_familiares_routes_1.default);
+app.use('/api/pediatria/antecedentes-perinatales', antecedentes_perinatales_routes_1.default);
+app.use('/api/pediatria/desarrollo-psicomotriz', desarrollo_psicomotriz_routes_1.default);
+app.use('/api/pediatria/inmunizaciones', inmunizaciones_routes_1.default);
+app.use('/api/pediatria/vacunas-adicionales', vacunas_adicionales_routes_1.default);
+app.use('/api/pediatria/estado-nutricional', estado_nutricional_pediatrico_routes_1.default);
+app.use('/api/pediatria/dashboard', dashboard_pediatrico_routes_1.default);
 app.use('/api/configuracion', configuracion_routes_1.default);
 // ==========================================
 // MIDDLEWARE PARA LOGGING DE REQUESTS (DESARROLLO)

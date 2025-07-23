@@ -1,5 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const antecedentes_heredo_familiares_controller_1 = require("../../controllers/pediatria/antecedentes_heredo_familiares.controller");
 const router = (0, express_1.Router)();
+router.post('/', antecedentes_heredo_familiares_controller_1.AntecedentesHeredoFamiliaresController.crear);
+router.get('/historia-clinica/:id_historia_clinica', antecedentes_heredo_familiares_controller_1.AntecedentesHeredoFamiliaresController.obtenerPorHistoriaClinica);
+router.put('/:id', antecedentes_heredo_familiares_controller_1.AntecedentesHeredoFamiliaresController.actualizar);
+router.delete('/:id', antecedentes_heredo_familiares_controller_1.AntecedentesHeredoFamiliaresController.eliminar);
 exports.default = router;
