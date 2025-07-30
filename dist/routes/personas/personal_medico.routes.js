@@ -15,6 +15,9 @@ router.get("/activos", personal_medico_controller_1.getPersonalMedicoActivo);
 // GET /api/personas/personal-medico - Obtener todo el personal médico
 // Query params: ?activo=true&especialidad=Cardiología&cargo=Jefe&departamento=Medicina&buscar=juan
 router.get("/", personal_medico_controller_1.getPersonalMedico);
+router.get("/:id/perfil-completo", personal_medico_controller_1.getPerfilMedicoConPacientes);
+// PATCH /api/personas/personal-medico/:id/foto - Actualizar solo la foto 🆕
+router.patch("/:id/foto", personal_medico_controller_1.updateFotoPersonalMedico);
 // GET /api/personas/personal-medico/:id - Obtener personal médico por ID
 router.get("/:id", personal_medico_controller_1.getPersonalMedicoById);
 // POST /api/personas/personal-medico - Crear nuevo personal médico
@@ -23,5 +26,4 @@ router.post("/", personal_medico_controller_1.createPersonalMedico);
 router.put("/:id", personal_medico_controller_1.updatePersonalMedico);
 // DELETE /api/personas/personal-medico/:id - Eliminar personal médico
 router.delete("/:id", personal_medico_controller_1.deletePersonalMedico);
-router.get("/:id/perfil-completo", personal_medico_controller_1.getPerfilMedicoConPacientes);
 exports.default = router;

@@ -66,7 +66,8 @@ export const getNotasInterconsulta = async (req: Request, res: Response): Promis
       LEFT JOIN persona pm_sol ON pm_sol_rel.id_persona = pm_sol.id_persona
       LEFT JOIN personal_medico pm_int_rel ON ni.id_medico_interconsulta = pm_int_rel.id_personal_medico
       LEFT JOIN persona pm_int ON pm_int_rel.id_persona = pm_int.id_persona
-      LEFT JOIN servicio s ON dc.id_servicio = s.id_servicio
+      LEFT JOIN internamiento int_serv ON dc.id_internamiento = int_serv.id_internamiento
+      LEFT JOIN servicio s ON int_serv.id_servicio = s.id_servicio
       WHERE 1=1
     `;
     
@@ -230,7 +231,8 @@ export const getNotaInterconsultaById = async (req: Request, res: Response): Pro
       LEFT JOIN persona pm_sol ON pm_sol_rel.id_persona = pm_sol.id_persona
       LEFT JOIN personal_medico pm_int_rel ON ni.id_medico_interconsulta = pm_int_rel.id_personal_medico
       LEFT JOIN persona pm_int ON pm_int_rel.id_persona = pm_int.id_persona
-      LEFT JOIN servicio s ON dc.id_servicio = s.id_servicio
+      LEFT JOIN internamiento int_serv ON dc.id_internamiento = int_serv.id_internamiento
+      LEFT JOIN servicio s ON int_serv.id_servicio = s.id_servicio
       LEFT JOIN internamiento int ON dc.id_internamiento = int.id_internamiento
       LEFT JOIN cama c ON int.id_cama = c.id_cama
       WHERE ni.id_nota_interconsulta = $1
@@ -633,7 +635,8 @@ export const getNotasInterconsultaPendientes = async (req: Request, res: Respons
       LEFT JOIN area_interconsulta ai ON ni.area_interconsulta = ai.id_area_interconsulta
       LEFT JOIN personal_medico pm_sol_rel ON ni.id_medico_solicitante = pm_sol_rel.id_personal_medico
       LEFT JOIN persona pm_sol ON pm_sol_rel.id_persona = pm_sol.id_persona
-      LEFT JOIN servicio s ON dc.id_servicio = s.id_servicio
+      LEFT JOIN internamiento int_serv ON dc.id_internamiento = int_serv.id_internamiento
+      LEFT JOIN servicio s ON int_serv.id_servicio = s.id_servicio
       LEFT JOIN internamiento int ON dc.id_internamiento = int.id_internamiento
       LEFT JOIN cama c ON int.id_cama = c.id_cama
       WHERE ni.id_medico_interconsulta IS NULL

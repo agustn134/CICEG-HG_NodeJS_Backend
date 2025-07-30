@@ -6,6 +6,7 @@ import {
   createPersonalMedico,
   updatePersonalMedico,
   deletePersonalMedico,
+    updateFotoPersonalMedico, // 🆕 IMPORTAR NUEVA FUNCIÓN
   getPersonalMedicoActivo,
   getEstadisticasPersonalMedico,
   getPerfilMedicoConPacientes
@@ -28,6 +29,11 @@ router.get("/activos", getPersonalMedicoActivo);
 // Query params: ?activo=true&especialidad=Cardiología&cargo=Jefe&departamento=Medicina&buscar=juan
 router.get("/", getPersonalMedico);
 
+router.get("/:id/perfil-completo", getPerfilMedicoConPacientes);
+
+// PATCH /api/personas/personal-medico/:id/foto - Actualizar solo la foto 🆕
+router.patch("/:id/foto", updateFotoPersonalMedico);
+
 // GET /api/personas/personal-medico/:id - Obtener personal médico por ID
 router.get("/:id", getPersonalMedicoById);
 
@@ -40,6 +46,5 @@ router.put("/:id", updatePersonalMedico);
 // DELETE /api/personas/personal-medico/:id - Eliminar personal médico
 router.delete("/:id", deletePersonalMedico);
 
-router.get("/:id/perfil-completo", getPerfilMedicoConPacientes);
 
 export default router;

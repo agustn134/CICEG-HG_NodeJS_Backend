@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPerfilMedicoConPacientes = exports.getEstadisticasPersonalMedico = exports.getPersonalMedicoActivo = exports.deletePersonalMedico = exports.updatePersonalMedico = exports.createPersonalMedico = exports.getPersonalMedicoById = exports.getPersonalMedico = void 0;
+exports.getPerfilMedicoConPacientes = exports.getEstadisticasPersonalMedico = exports.getPersonalMedicoActivo = exports.deletePersonalMedico = exports.updatePersonalMedico = exports.updateFotoPersonalMedico = exports.createPersonalMedico = exports.getPersonalMedicoById = exports.getPersonalMedico = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 // ==========================================
 // OBTENER TODO EL PERSONAL MÉDICO
@@ -551,6 +551,57 @@ const createPersonalMedico = async (req, res) => {
     }
 };
 exports.createPersonalMedico = createPersonalMedico;
+// src/controllers/personas/personal_medico.controller.ts
+// ==========================================
+// ACTUALIZAR SOLO LA FOTO DEL PERSONAL MÉDICO
+// ==========================================
+const updateFotoPersonalMedico = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { foto } = req.body;
+        if (!id || isNaN(parseInt(id))) {
+            return res.status(400).json({
+                success: false,
+                message: 'El ID debe ser un número válido'
+            });
+        }
+        // Verificar que el personal médico existe
+        const existeQuery = `
+      SELECT id_personal_medico 
+      FROM personal_medico 
+      WHERE id_personal_medico = $1
+    `;
+        const existeResponse = await database_1.default.query(existeQuery, [id]);
+        if (existeResponse.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Personal médico no encontrado'
+            });
+        }
+        // Actualizar solo la foto
+        const updateQuery = `
+      UPDATE personal_medico 
+      SET foto = $1
+      WHERE id_personal_medico = $2
+      RETURNING foto
+    `;
+        const response = await database_1.default.query(updateQuery, [foto || null, id]);
+        return res.status(200).json({
+            success: true,
+            message: foto ? 'Foto actualizada correctamente' : 'Foto eliminada correctamente',
+            data: { foto: response.rows[0].foto }
+        });
+    }
+    catch (error) {
+        console.error('Error al actualizar foto:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al actualizar la foto',
+            error: process.env.NODE_ENV === 'development' ? error : {}
+        });
+    }
+};
+exports.updateFotoPersonalMedico = updateFotoPersonalMedico;
 // ==========================================
 // ACTUALIZAR PERSONAL MÉDICO
 // ==========================================
@@ -855,6 +906,7 @@ const getPerfilMedicoConPacientes = async (req, res) => {
         pm.especialidad,
         pm.cargo,
         pm.departamento,
+        pm.foto, 
         CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_completo,
         COUNT(dc.id_documento) as total_documentos_creados,
         COUNT(CASE WHEN dc.fecha_elaboracion >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as documentos_mes_actual
@@ -862,7 +914,7 @@ const getPerfilMedicoConPacientes = async (req, res) => {
       JOIN persona p ON pm.id_persona = p.id_persona
       LEFT JOIN documento_clinico dc ON pm.id_personal_medico = dc.id_personal_creador
       WHERE pm.id_personal_medico = $1
-      GROUP BY pm.id_personal_medico, pm.numero_cedula, pm.especialidad, pm.cargo, pm.departamento, p.nombre, p.apellido_paterno, p.apellido_materno
+      GROUP BY pm.id_personal_medico, pm.numero_cedula, pm.especialidad, pm.cargo, pm.departamento, pm.foto, p.nombre, p.apellido_paterno, p.apellido_materno
     `;
         // Pacientes atendidos por este médico
         const pacientesQuery = `
