@@ -1,4 +1,4 @@
-// src/controllers/configuracion.controller.ts (ACTUALIZACIÓN FINAL)
+// src/controllers/configuracion.controller.ts (VERSIÓN MEJORADA)
 import { Request, Response } from 'express';
 import { QueryResult } from 'pg';
 import pool from '../config/database';
@@ -6,61 +6,137 @@ import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Extender el tipo Request para incluir file
 interface MulterFileRequest extends Request {
   file?: Express.Multer.File;
 }
 
-// Configuración de multer para subir archivos
-const storage = multer.diskStorage({
-  destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-    const uploadPath = path.join(__dirname, '../../public/uploads/logos');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-    const tipo = req.body.tipo;
-    const extension = path.extname(file.originalname);
-    const nombreArchivo = `${tipo}-${Date.now()}${extension}`;
-    cb(null, nombreArchivo);
+class LogoManagerService {
+  private uploadsDir: string;
+  private defaultLogos: { [key: string]: string };
+  private importedLogos: { [key: string]: string };
+
+  constructor() {
+    this.uploadsDir = path.join(__dirname, '../../public/uploads/logos');
+    this.defaultLogos = {
+      principal: 'logo-principal-default.svg',
+      sidebar: 'logo-sidebar-default.svg', 
+      gobierno: 'logo-gobierno-default.svg',
+      favicon: 'favicon.ico'
+    };
+    this.importedLogos = {
+      principal: 'logo-principal-importado',
+      sidebar: 'logo-sidebar-importado',
+      gobierno: 'logo-gobierno-importado', 
+      favicon: 'favicon-importado'
+    };
   }
-});
+
+  async subirLogoInteligente(archivo: Express.Multer.File, tipo: string): Promise<string> {
+    try {
+      // 1. Generar nuevo nombre estandarizado
+      const extension = path.extname(archivo.originalname);
+      const nuevoNombre = `${this.importedLogos[tipo]}${extension}`;
+      const rutaCompleta = path.join(this.uploadsDir, nuevoNombre);
+      
+      // 2. Eliminar logo importado anterior si existe
+      await this.eliminarLogoImportadoAnterior(tipo);
+      
+      // 3. Guardar nuevo archivo con nombre estándar
+      fs.writeFileSync(rutaCompleta, archivo.buffer);
+      
+      console.log(`✅ Logo ${tipo} guardado como: ${nuevoNombre}`);
+      
+      // 4. Retornar ruta para la BD
+      return `/uploads/logos/${nuevoNombre}`;
+      
+    } catch (error) {
+      console.error('Error al subir logo:', error);
+      throw error;
+    }
+  }
+
+  private async eliminarLogoImportadoAnterior(tipo: string): Promise<void> {
+    try {
+      if (!fs.existsSync(this.uploadsDir)) return;
+      
+      const archivos = fs.readdirSync(this.uploadsDir);
+      const patronAnterior = new RegExp(`^${this.importedLogos[tipo]}\\.(svg|png|jpg|jpeg|ico)$`, 'i');
+      
+      for (const archivo of archivos) {
+        if (patronAnterior.test(archivo)) {
+          const rutaArchivo = path.join(this.uploadsDir, archivo);
+          fs.unlinkSync(rutaArchivo);
+          console.log(`🗑️ Logo anterior eliminado: ${archivo}`);
+        }
+      }
+    } catch (error) {
+      console.warn('Advertencia al eliminar logo anterior:', error);
+    }
+  }
+
+  async restaurarDefault(tipo: string): Promise<string> {
+    // Eliminar importado y usar default
+    await this.eliminarLogoImportadoAnterior(tipo);
+    return `/uploads/logos/${this.defaultLogos[tipo]}`;
+  }
+
+  verificarArchivo(ruta: string, fallback: string): string {
+    if (!ruta) return fallback;
+    
+    const rutaCompleta = path.join(__dirname, '../../public', ruta);
+    if (fs.existsSync(rutaCompleta)) {
+      return ruta;
+    }
+    
+    // Intentar versión SVG si no existe PNG
+    const rutaSvg = ruta.replace(/\.(png|jpg|jpeg)$/i, '.svg');
+    const rutaSvgCompleta = path.join(__dirname, '../../public', rutaSvg);
+    if (fs.existsSync(rutaSvgCompleta)) {
+      return rutaSvg;
+    }
+    
+    return fallback;
+  }
+}
+
+// Instancia del manager
+const logoManager = new LogoManagerService();
+
+// 🔥 CONFIGURACIÓN DE MULTER MEJORADA
+const storage = multer.memoryStorage(); // Usar memoria para mayor control
 
 export const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB máximo
   fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
-    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-icon', 'image/svg+xml'];
-    if (tiposPermitidos.includes(file.mimetype)) {
+    // 🔥 ARREGLO: Verificar si tipo existe antes de validar
+    const tipo = req.body?.tipo;
+    
+    if (!tipo) {
+      console.warn('Tipo no especificado, permitiendo subida temporal');
+      cb(null, true); // Permitir temporalmente
+      return;
+    }
+    
+    const tiposPermitidos = {
+      principal: ['image/jpeg', 'image/png', 'image/svg+xml'],
+      sidebar: ['image/jpeg', 'image/png', 'image/svg+xml'],
+      gobierno: ['image/jpeg', 'image/png', 'image/svg+xml'],
+      favicon: ['image/x-icon', 'image/png', 'image/svg+xml']
+    };
+    
+    const tiposValidos = tiposPermitidos[tipo as keyof typeof tiposPermitidos] || [];
+    
+    if (tiposValidos.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Tipo de archivo no permitido'));
+      const extensiones = tiposValidos.map(t => t.split('/')[1]).join(', ');
+      cb(new Error(`Formato no válido para ${tipo}. Use: ${extensiones}`));
     }
   }
 });
 
-// 🔥 FUNCIÓN AUXILIAR PARA VERIFICAR ARCHIVOS
-const verificarArchivo = (ruta: string, fallback: string): string => {
-  if (!ruta) return fallback;
-  
-  const rutaCompleta = path.join(__dirname, '../../public', ruta);
-  if (fs.existsSync(rutaCompleta)) {
-    return ruta;
-  }
-  
-  // Intentar versión SVG si no existe PNG
-  const rutaSvg = ruta.replace(/\.(png|jpg|jpeg)$/i, '.svg');
-  const rutaSvgCompleta = path.join(__dirname, '../../public', rutaSvg);
-  if (fs.existsSync(rutaSvgCompleta)) {
-    return rutaSvg;
-  }
-  
-  return fallback;
-};
-
-// 🔥 OBTENER CONFIGURACIÓN CON VERIFICACIÓN DE ARCHIVOS
+// 🔥 OBTENER CONFIGURACIÓN CON VERIFICACIÓN
 export const getConfiguracionLogos = async (req: Request, res: Response): Promise<Response> => {
   try {
     const query = `
@@ -74,27 +150,26 @@ export const getConfiguracionLogos = async (req: Request, res: Response): Promis
     
     const result: QueryResult = await pool.query(query);
     
-    // Convertir array a objeto
     const configuracion = result.rows.reduce((acc: any, row: any) => {
       acc[row.parametro] = row.valor;
       return acc;
     }, {});
     
-    // 🔥 VALORES POR DEFECTO QUE SIEMPRE FUNCIONAN
+    // Valores por defecto con verificación
     const configDefault = {
-      logo_principal: verificarArchivo(
+      logo_principal: logoManager.verificarArchivo(
         configuracion.logo_principal, 
         '/uploads/logos/logo-principal-default.svg'
       ),
-      logo_sidebar: verificarArchivo(
+      logo_sidebar: logoManager.verificarArchivo(
         configuracion.logo_sidebar, 
         '/uploads/logos/logo-sidebar-default.svg'
       ),
-      favicon: verificarArchivo(
+      favicon: logoManager.verificarArchivo(
         configuracion.favicon, 
         '/uploads/logos/favicon.ico'
       ),
-      logo_gobierno: verificarArchivo(
+      logo_gobierno: logoManager.verificarArchivo(
         configuracion.logo_gobierno, 
         '/uploads/logos/logo-gobierno-default.svg'
       ),
@@ -110,6 +185,58 @@ export const getConfiguracionLogos = async (req: Request, res: Response): Promis
     return res.status(500).json({
       success: false,
       message: 'Error al obtener configuración'
+    });
+  }
+};
+
+// 🔥 SUBIR LOGO CON GESTIÓN INTELIGENTE
+export const subirLogo = async (req: MulterFileRequest, res: Response): Promise<Response> => {
+  try {
+    const { tipo } = req.body;
+    const archivo = req.file;
+    
+    if (!archivo) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se recibió ningún archivo'
+      });
+    }
+
+    // Validar tipo
+    const tiposValidos = ['principal', 'sidebar', 'gobierno', 'favicon'];
+    if (!tiposValidos.includes(tipo)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipo de logo no válido'
+      });
+    }
+    
+    // Usar el manager para subir inteligentemente
+    const rutaArchivo = await logoManager.subirLogoInteligente(archivo, tipo);
+    const parametro = `logo_${tipo}`;
+    
+    // Guardar ruta en base de datos
+    await pool.query(`
+      INSERT INTO configuracion_sistema (parametro, valor, descripcion, fecha_modificacion)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      ON CONFLICT (parametro) 
+      DO UPDATE SET valor = $2, fecha_modificacion = CURRENT_TIMESTAMP
+    `, [parametro, rutaArchivo, `Logo ${tipo} del sistema`]);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Logo actualizado correctamente',
+      data: {
+        parametro,
+        ruta: rutaArchivo,
+        nombre_archivo: path.basename(rutaArchivo)
+      }
+    });
+  } catch (error) {
+    console.error('Error al subir logo:', error);
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Error al subir logo'
     });
   }
 };
@@ -150,48 +277,7 @@ export const actualizarConfiguracion = async (req: Request, res: Response): Prom
   }
 };
 
-// Subir logo
-export const subirLogo = async (req: MulterFileRequest, res: Response): Promise<Response> => {
-  try {
-    const { tipo } = req.body;
-    const archivo = req.file;
-    
-    if (!archivo) {
-      return res.status(400).json({
-        success: false,
-        message: 'No se recibió ningún archivo'
-      });
-    }
-    
-    const rutaArchivo = `/uploads/logos/${archivo.filename}`;
-    const parametro = `logo_${tipo}`;
-    
-    // Guardar ruta en base de datos
-    await pool.query(`
-      INSERT INTO configuracion_sistema (parametro, valor, descripcion, fecha_modificacion)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-      ON CONFLICT (parametro) 
-      DO UPDATE SET valor = $2, fecha_modificacion = CURRENT_TIMESTAMP
-    `, [parametro, rutaArchivo, `Logo ${tipo} del sistema`]);
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Logo subido correctamente',
-      data: {
-        parametro,
-        ruta: rutaArchivo
-      }
-    });
-  } catch (error) {
-    console.error('Error al subir logo:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error al subir logo'
-    });
-  }
-};
-
-// Agregar al final de configuracion.controller.ts
+// 🔥 DEBUG MEJORADO
 export const debugLogos = async (req: Request, res: Response): Promise<Response> => {
   const uploadPath = path.join(__dirname, '../../public/uploads/logos');
   
@@ -202,20 +288,23 @@ export const debugLogos = async (req: Request, res: Response): Promise<Response>
       const stats = fs.statSync(rutaCompleta);
       return {
         nombre: archivo,
-        tamaño: stats.size,
+        tamaño: `${(stats.size / 1024).toFixed(2)} KB`,
         modificado: stats.mtime,
+        tipo: archivo.includes('default') ? 'DEFAULT' : 'IMPORTADO',
         existe: fs.existsSync(rutaCompleta)
       };
     });
     
     return res.json({
       directorio: uploadPath,
+      total_archivos: archivos.length,
       archivos: estadoArchivos,
       servidor_activo: true
     });
   } catch (error) {
     return res.status(500).json({
-      directorio: uploadPath
+      directorio: uploadPath,
+      error: 'No se pudo acceder al directorio'
     });
   }
 };

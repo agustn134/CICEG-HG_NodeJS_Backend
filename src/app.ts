@@ -32,7 +32,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
-
+// Agregar esta línea para servir archivos estáticos
 // Configuración de parseo de JSON y URL encoded
 app.use(express.json({ 
   limit: '10mb',
