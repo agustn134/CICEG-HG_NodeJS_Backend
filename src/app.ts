@@ -11,11 +11,11 @@ const app = express();
 
 (async () => {
   try {
-    console.log('🏥 Inicializando sistema CICEG-HG...');
+    console.log('Inicializando sistema CICEG-HG...');
     await InicializadorSistema.inicializarLogosDefault();
-    console.log('✅ Sistema inicializado correctamente');
+    console.log('Sistema inicializado correctamente');
   } catch (error) {
-    console.error('❌ Error al inicializar sistema:', error);
+    console.error('Error al inicializar sistema:', error);
   }
 })();
 

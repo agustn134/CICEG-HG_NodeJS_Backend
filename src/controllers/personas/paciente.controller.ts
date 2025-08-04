@@ -363,10 +363,108 @@ export const getPacienteById = async (req: Request, res: Response): Promise<void
 // ==========================================
 // CREAR NUEVO PACIENTE
 // ==========================================
+// export const createPaciente = async (req: Request, res: Response): Promise<Response> => {
+//   try {
+//     const {
+//       id_persona,
+//       alergias,
+//       transfusiones = false,
+//       detalles_transfusiones,
+//       familiar_responsable,
+//       parentesco_familiar,
+//       telefono_familiar,
+//       ocupacion,
+//       escolaridad,
+//       lugar_nacimiento
+//     } = req.body;
+    
+//     // Validaciones básicas
+//     if (!id_persona) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'El ID de persona es obligatorio'
+//       });
+//     }
+    
+//     // Verificar que la persona existe
+//     const personaExisteQuery = `
+//       SELECT id_persona 
+//       FROM persona 
+//       WHERE id_persona = $1
+//     `;
+    
+//     const personaExisteResponse: QueryResult = await pool.query(personaExisteQuery, [id_persona]);
+    
+//     if (personaExisteResponse.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'La persona especificada no existe'
+//       });
+//     }
+    
+//     // Verificar que la persona no tenga ya un registro de paciente
+//     const yaExisteQuery = `
+//       SELECT id_paciente 
+//       FROM paciente 
+//       WHERE id_persona = $1
+//     `;
+    
+//     const yaExisteResponse: QueryResult = await pool.query(yaExisteQuery, [id_persona]);
+    
+//     if (yaExisteResponse.rows.length > 0) {
+//       return res.status(409).json({
+//         success: false,
+//         message: 'Esta persona ya tiene un registro como paciente'
+//       });
+//     }
+    
+//     // Insertar nuevo paciente
+//     const insertQuery = `
+//       INSERT INTO paciente (
+//         id_persona, alergias, transfusiones, detalles_transfusiones,
+//         familiar_responsable, parentesco_familiar, telefono_familiar,
+//         ocupacion, escolaridad, lugar_nacimiento
+//       )
+//       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+//       RETURNING *
+//     `;
+    
+//     const response: QueryResult = await pool.query(insertQuery, [
+//       id_persona,
+//       alergias?.trim() || null,
+//       transfusiones,
+//       detalles_transfusiones?.trim() || null,
+//       familiar_responsable?.trim() || null,
+//       parentesco_familiar?.trim() || null,
+//       telefono_familiar?.trim() || null,
+//       ocupacion?.trim() || null,
+//       escolaridad?.trim() || null,
+//       lugar_nacimiento?.trim() || null
+//     ]);
+    
+//     return res.status(201).json({
+//       success: true,
+//       message: 'Paciente creado correctamente',
+//       data: response.rows[0]
+//     });
+//   } catch (error) {
+//     console.error('Error al crear paciente:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Error interno del servidor al crear paciente',
+//       error: process.env.NODE_ENV === 'development' ? error : {}
+//     });
+//   }
+// };
 export const createPaciente = async (req: Request, res: Response): Promise<Response> => {
+  const client = await pool.connect(); // 🔧 Usar transacción
+
   try {
+    await client.query('BEGIN'); // 🔧 Iniciar transacción
+
     const {
       id_persona,
+      tipo_sangre_id, // 🔧 AGREGAR tipo_sangre_id
       alergias,
       transfusiones = false,
       detalles_transfusiones,
@@ -380,6 +478,7 @@ export const createPaciente = async (req: Request, res: Response): Promise<Respo
     
     // Validaciones básicas
     if (!id_persona) {
+      await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         message: 'El ID de persona es obligatorio'
@@ -393,9 +492,10 @@ export const createPaciente = async (req: Request, res: Response): Promise<Respo
       WHERE id_persona = $1
     `;
     
-    const personaExisteResponse: QueryResult = await pool.query(personaExisteQuery, [id_persona]);
+    const personaExisteResponse = await client.query(personaExisteQuery, [id_persona]);
     
     if (personaExisteResponse.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({
         success: false,
         message: 'La persona especificada no existe'
@@ -409,13 +509,45 @@ export const createPaciente = async (req: Request, res: Response): Promise<Respo
       WHERE id_persona = $1
     `;
     
-    const yaExisteResponse: QueryResult = await pool.query(yaExisteQuery, [id_persona]);
+    const yaExisteResponse = await client.query(yaExisteQuery, [id_persona]);
     
     if (yaExisteResponse.rows.length > 0) {
+      await client.query('ROLLBACK');
       return res.status(409).json({
         success: false,
         message: 'Esta persona ya tiene un registro como paciente'
       });
+    }
+
+    // 🔧 NUEVA VALIDACIÓN: Verificar que el tipo de sangre existe si se proporciona
+    if (tipo_sangre_id) {
+      const tipoSangreQuery = `
+        SELECT id_tipo_sangre 
+        FROM tipo_sangre 
+        WHERE id_tipo_sangre = $1
+      `;
+      
+      const tipoSangreResponse = await client.query(tipoSangreQuery, [tipo_sangre_id]);
+      
+      if (tipoSangreResponse.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'El tipo de sangre especificado no existe'
+        });
+      }
+    }
+
+    // 🔧 ACTUALIZAR LA PERSONA CON EL TIPO DE SANGRE
+    if (tipo_sangre_id) {
+      const updatePersonaQuery = `
+        UPDATE persona 
+        SET tipo_sangre_id = $1
+        WHERE id_persona = $2
+      `;
+      
+      await client.query(updatePersonaQuery, [tipo_sangre_id, id_persona]);
+      console.log(`✅ Persona ${id_persona} actualizada con tipo de sangre ID: ${tipo_sangre_id}`);
     }
     
     // Insertar nuevo paciente
@@ -429,7 +561,7 @@ export const createPaciente = async (req: Request, res: Response): Promise<Respo
       RETURNING *
     `;
     
-    const response: QueryResult = await pool.query(insertQuery, [
+    const response = await client.query(insertQuery, [
       id_persona,
       alergias?.trim() || null,
       transfusiones,
@@ -441,6 +573,8 @@ export const createPaciente = async (req: Request, res: Response): Promise<Respo
       escolaridad?.trim() || null,
       lugar_nacimiento?.trim() || null
     ]);
+
+    await client.query('COMMIT'); // 🔧 Confirmar transacción
     
     return res.status(201).json({
       success: true,
@@ -448,15 +582,16 @@ export const createPaciente = async (req: Request, res: Response): Promise<Respo
       data: response.rows[0]
     });
   } catch (error) {
+    await client.query('ROLLBACK'); // 🔧 Revertir en caso de error
     console.error('Error al crear paciente:', error);
     return res.status(500).json({
       success: false,
       message: 'Error interno del servidor al crear paciente',
-      error: process.env.NODE_ENV === 'development' ? error : {}
-    });
+error: process.env.NODE_ENV === 'development' ? (error as any).message : undefined    });
+  } finally {
+    client.release(); // 🔧 Liberar conexión
   }
 };
-
 // ==========================================
 // ACTUALIZAR PACIENTE
 // ==========================================

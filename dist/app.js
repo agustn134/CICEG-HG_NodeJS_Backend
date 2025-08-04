@@ -13,12 +13,12 @@ const password_reset_routes_1 = __importDefault(require("./routes/auth/password-
 const app = (0, express_1.default)();
 (async () => {
     try {
-        console.log('🏥 Inicializando sistema CICEG-HG...');
+        console.log('Inicializando sistema CICEG-HG...');
         await inicializar_sistema_1.InicializadorSistema.inicializarLogosDefault();
-        console.log('✅ Sistema inicializado correctamente');
+        console.log('Sistema inicializado correctamente');
     }
     catch (error) {
-        console.error('❌ Error al inicializar sistema:', error);
+        console.error('Error al inicializar sistema:', error);
     }
 })();
 // ========== CONFIGURACIÓN CORS - DEBE IR ANTES DE TODO ==========
