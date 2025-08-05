@@ -1,4 +1,4 @@
-// ==========================================
+// C:\Proyectos\CICEG-HG_NodeJS_Backend\src\routes\documentos_clinicos\nota_preoperatoria.routes.ts// ==========================================
 // RUTAS PARA NOTA PREOPERATORIA
 // ==========================================
 // src/routes/documentos_clinicos/nota_preoperatoria.routes.ts
