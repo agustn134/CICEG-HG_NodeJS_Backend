@@ -25,7 +25,9 @@ app.use(cors({
     'http://localhost:4200',  // Angular dev server
     'http://localhost:5173',  // Vite
     'http://127.0.0.1:4200',
-    'http://127.0.0.1:5173'
+    'http://127.0.0.1:5173',
+    'http://192.168.1.95:4200',
+    'https://q0thf4l6-4200.usw3.devtunnels.ms'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT','PATCH', 'DELETE', 'OPTIONS'],
@@ -101,6 +103,12 @@ import dashboardPediatricoRoutes from './routes/pediatria/dashboard_pediatrico.r
 // ==========================================
 // RUTA PRINCIPAL DE INFORMACIÓN DEL SISTEMA
 // ==========================================
+
+// Ruta raíz para /api (opcional, para que no muestre "Cannot GET /api")
+app.get('/api', (req, res) => {
+  res.json({ mensaje: 'API del SICEG-HG está funcionando. Usa /api/usuarios, /api/pacientes, etc.' });
+});
+
 app.get('/', (req, res) => {
   return ResponseHelper.success(res, 'Bienvenido a la API del Hospital General San Luis de la Paz', {
     hospital: 'Hospital General San Luis de la Paz',

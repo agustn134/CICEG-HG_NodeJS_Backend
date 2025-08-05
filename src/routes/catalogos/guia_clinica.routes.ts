@@ -12,19 +12,13 @@ import {
 
 const router = Router();
 
-// ==========================================
-// RUTAS PARA GUÍAS CLÍNICAS DE DIAGNÓSTICO
-// ==========================================
-
-// GET /api/catalogos/guias-clinicas/estadisticas - Obtener estadísticas (debe ir ANTES que /:id)
+// GET /api/catalogos/guias-clinicas/estadisticas - Obtener estadísticas
 router.get("/estadisticas", getEstadisticasGuiasClinicas);
 
-// GET /api/catalogos/guias-clinicas/activas - Obtener solo guías activas (para selects)
-// Acepta query param: ?area=Pediatría
+// GET /api/catalogos/guias-clinicas/activas - Obtener guías activas
 router.get("/activas", getGuiasClinicasActivas);
 
 // GET /api/catalogos/guias-clinicas - Obtener todas las guías clínicas
-// Acepta query params: ?area=Urgencias&fuente=IMSS&activo=true
 router.get("/", getGuiasClinicas);
 
 // GET /api/catalogos/guias-clinicas/:id - Obtener guía clínica por ID

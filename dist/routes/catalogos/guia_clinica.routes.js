@@ -4,16 +4,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const guia_clinica_controller_1 = require("../../controllers/catalogos/guia_clinica.controller");
 const router = (0, express_1.Router)();
-// ==========================================
-// RUTAS PARA GUÍAS CLÍNICAS DE DIAGNÓSTICO
-// ==========================================
-// GET /api/catalogos/guias-clinicas/estadisticas - Obtener estadísticas (debe ir ANTES que /:id)
+// GET /api/catalogos/guias-clinicas/estadisticas - Obtener estadísticas
 router.get("/estadisticas", guia_clinica_controller_1.getEstadisticasGuiasClinicas);
-// GET /api/catalogos/guias-clinicas/activas - Obtener solo guías activas (para selects)
-// Acepta query param: ?area=Pediatría
+// GET /api/catalogos/guias-clinicas/activas - Obtener guías activas
 router.get("/activas", guia_clinica_controller_1.getGuiasClinicasActivas);
 // GET /api/catalogos/guias-clinicas - Obtener todas las guías clínicas
-// Acepta query params: ?area=Urgencias&fuente=IMSS&activo=true
 router.get("/", guia_clinica_controller_1.getGuiasClinicas);
 // GET /api/catalogos/guias-clinicas/:id - Obtener guía clínica por ID
 router.get("/:id", guia_clinica_controller_1.getGuiaClinicaById);
