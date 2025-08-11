@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// C:\Proyectos\CICEG-HG_NodeJS_Backend\src\app.ts
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const responses_1 = require("./utils/responses");
@@ -28,7 +29,7 @@ app.use((0, cors_1.default)({
         'http://localhost:5173', // Vite
         'http://127.0.0.1:4200',
         'http://127.0.0.1:5173',
-        'http://192.168.1.95:4200',
+        'http://192.168.1.70:4200',
         'https://q0thf4l6-4200.usw3.devtunnels.ms'
     ],
     credentials: true,

@@ -1,4 +1,4 @@
--- Inicio Tablas de Catálogos 
+-- Inicio Tablas de Catálogos  C:\Proyectos\CICEG-HG_NodeJS_Backend\src\config\querysql\Versiones iniciales\FormatoModelo2.sql
 -- Catálogo de Servicios Hospitalarios
 CREATE TABLE servicio (
   id_servicio SERIAL PRIMARY KEY,

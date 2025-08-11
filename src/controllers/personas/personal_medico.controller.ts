@@ -686,19 +686,135 @@ export const updateFotoPersonalMedico = async (req: Request, res: Response): Pro
 // ==========================================
 // ACTUALIZAR PERSONAL MÉDICO
 // ==========================================
+// export const updatePersonalMedico = async (req: Request, res: Response): Promise<Response> => {
+//   try {
+//     const { id } = req.params;
+//     const {
+//       numero_cedula,
+//       especialidad,
+//       cargo,
+//       departamento,
+//       activo,
+//       foto
+//     } = req.body;
+    
+//     if (!id || isNaN(parseInt(id))) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'El ID debe ser un número válido'
+//       });
+//     }
+    
+//     // Validaciones básicas
+//     if (!numero_cedula || numero_cedula.trim() === '') {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'El número de cédula es obligatorio'
+//       });
+//     }
+    
+//     if (!especialidad || especialidad.trim() === '') {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'La especialidad es obligatoria'
+//       });
+//     }
+    
+//     // Verificar que el personal médico existe
+//     const existeQuery = `
+//       SELECT id_personal_medico 
+//       FROM personal_medico 
+//       WHERE id_personal_medico = $1
+//     `;
+    
+//     const existeResponse: QueryResult = await pool.query(existeQuery, [id]);
+    
+//     if (existeResponse.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Personal médico no encontrado'
+//       });
+//     }
+    
+//     // Verificar que no exista otro personal médico con la misma cédula
+//     const duplicadoQuery = `
+//       SELECT id_personal_medico 
+//       FROM personal_medico 
+//       WHERE numero_cedula = $1 AND id_personal_medico != $2
+//     `;
+    
+//     const duplicadoResponse: QueryResult = await pool.query(duplicadoQuery, [numero_cedula.trim(), id]);
+    
+//     if (duplicadoResponse.rows.length > 0) {
+//       return res.status(409).json({
+//         success: false,
+//         message: 'Ya existe otro personal médico con ese número de cédula'
+//       });
+//     }
+    
+//     // Actualizar personal médico
+//     const updateQuery = `
+//       UPDATE personal_medico 
+//       SET 
+//         numero_cedula = $1,
+//         especialidad = $2,
+//         cargo = $3,
+//         departamento = $4,
+//         activo = $5,
+//         foto = $6
+//       WHERE id_personal_medico = $7
+//       RETURNING *
+//     `;
+    
+//     const response: QueryResult = await pool.query(updateQuery, [
+//       numero_cedula.trim(),
+//       especialidad.trim(),
+//       cargo?.trim() || null,
+//       departamento?.trim() || null,
+//       activo,
+//       foto || null,
+//       id
+//     ]);
+    
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Personal médico actualizado correctamente',
+//       data: response.rows[0]
+//     });
+//   } catch (error) {
+//     console.error('Error al actualizar personal médico:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Error interno del servidor al actualizar personal médico',
+//       error: process.env.NODE_ENV === 'development' ? error : {}
+//     });
+//   }
+// };
+
+
+// En personal_medico.controller.ts - REEMPLAZAR el método updatePersonalMedico
+
 export const updatePersonalMedico = async (req: Request, res: Response): Promise<Response> => {
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
+    
     const { id } = req.params;
     const {
+      // Datos de personal médico
       numero_cedula,
       especialidad,
       cargo,
       departamento,
       activo,
-      foto
+      foto,
+      // Datos de persona
+      persona
     } = req.body;
     
     if (!id || isNaN(parseInt(id))) {
+      await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         message: 'El ID debe ser un número válido'
@@ -707,6 +823,7 @@ export const updatePersonalMedico = async (req: Request, res: Response): Promise
     
     // Validaciones básicas
     if (!numero_cedula || numero_cedula.trim() === '') {
+      await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         message: 'El número de cédula es obligatorio'
@@ -714,46 +831,99 @@ export const updatePersonalMedico = async (req: Request, res: Response): Promise
     }
     
     if (!especialidad || especialidad.trim() === '') {
+      await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         message: 'La especialidad es obligatoria'
       });
     }
     
-    // Verificar que el personal médico existe
+    // Verificar que el personal médico existe y obtener id_persona
     const existeQuery = `
-      SELECT id_personal_medico 
-      FROM personal_medico 
-      WHERE id_personal_medico = $1
+      SELECT pm.id_personal_medico, pm.id_persona 
+      FROM personal_medico pm
+      WHERE pm.id_personal_medico = $1
     `;
     
-    const existeResponse: QueryResult = await pool.query(existeQuery, [id]);
+    const existeResponse = await client.query(existeQuery, [id]);
     
     if (existeResponse.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({
         success: false,
         message: 'Personal médico no encontrado'
       });
     }
     
-    // Verificar que no exista otro personal médico con la misma cédula
+    const { id_persona } = existeResponse.rows[0];
+    
+    // Verificar cédula duplicada
     const duplicadoQuery = `
       SELECT id_personal_medico 
       FROM personal_medico 
       WHERE numero_cedula = $1 AND id_personal_medico != $2
     `;
     
-    const duplicadoResponse: QueryResult = await pool.query(duplicadoQuery, [numero_cedula.trim(), id]);
+    const duplicadoResponse = await client.query(duplicadoQuery, [numero_cedula.trim(), id]);
     
     if (duplicadoResponse.rows.length > 0) {
+      await client.query('ROLLBACK');
       return res.status(409).json({
         success: false,
         message: 'Ya existe otro personal médico con ese número de cédula'
       });
     }
     
-    // Actualizar personal médico
-    const updateQuery = `
+    // ==========================================
+    // ACTUALIZAR DATOS DE PERSONA SI SE PROPORCIONAN
+    // ==========================================
+    
+    if (persona) {
+      // Buscar tipo de sangre ID si se proporciona
+      let tipoSangreId = null;
+      if (persona.tipo_sangre) {
+        const tipoSangreQuery = `SELECT id_tipo_sangre FROM tipo_sangre WHERE nombre = $1`;
+        const tipoSangreResponse = await client.query(tipoSangreQuery, [persona.tipo_sangre]);
+        
+        if (tipoSangreResponse.rows.length > 0) {
+          tipoSangreId = tipoSangreResponse.rows[0].id_tipo_sangre;
+        }
+      }
+      
+      const updatePersonaQuery = `
+        UPDATE persona 
+        SET 
+          nombre = $1,
+          apellido_paterno = $2,
+          apellido_materno = $3,
+          fecha_nacimiento = $4,
+          sexo = $5,
+          telefono = $6,
+          correo_electronico = $7,
+          curp = $8,
+          tipo_sangre_id = $9
+        WHERE id_persona = $10
+      `;
+      
+      await client.query(updatePersonaQuery, [
+        persona.nombre?.trim(),
+        persona.apellido_paterno?.trim(),
+        persona.apellido_materno?.trim() || null,
+        persona.fecha_nacimiento,
+        persona.sexo,
+        persona.telefono?.trim() || null,
+        persona.correo_electronico?.trim() || null,
+        persona.curp?.trim() || null,
+        tipoSangreId,
+        id_persona
+      ]);
+    }
+    
+    // ==========================================
+    // ACTUALIZAR DATOS DE PERSONAL MÉDICO
+    // ==========================================
+    
+    const updatePersonalMedicoQuery = `
       UPDATE personal_medico 
       SET 
         numero_cedula = $1,
@@ -761,12 +931,13 @@ export const updatePersonalMedico = async (req: Request, res: Response): Promise
         cargo = $3,
         departamento = $4,
         activo = $5,
-        foto = $6
+        foto = $6,
+        fecha_actualizacion = CURRENT_TIMESTAMP
       WHERE id_personal_medico = $7
       RETURNING *
     `;
     
-    const response: QueryResult = await pool.query(updateQuery, [
+    const personalMedicoResponse = await client.query(updatePersonalMedicoQuery, [
       numero_cedula.trim(),
       especialidad.trim(),
       cargo?.trim() || null,
@@ -776,20 +947,45 @@ export const updatePersonalMedico = async (req: Request, res: Response): Promise
       id
     ]);
     
+    await client.query('COMMIT');
+    
     return res.status(200).json({
       success: true,
       message: 'Personal médico actualizado correctamente',
-      data: response.rows[0]
+      data: personalMedicoResponse.rows[0]
     });
+    
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error al actualizar personal médico:', error);
+    
+    const pgError = error as any;
+    
+    if (pgError.code === '23505') {
+      if (pgError.detail?.includes('curp')) {
+        return res.status(409).json({
+          success: false,
+          message: 'Ya existe una persona registrada con este CURP'
+        });
+      }
+      if (pgError.detail?.includes('correo_electronico')) {
+        return res.status(409).json({
+          success: false,
+          message: 'Ya existe una persona registrada con este correo electrónico'
+        });
+      }
+    }
+    
     return res.status(500).json({
       success: false,
       message: 'Error interno del servidor al actualizar personal médico',
       error: process.env.NODE_ENV === 'development' ? error : {}
     });
+  } finally {
+    client.release();
   }
 };
+
 
 // ==========================================
 // ELIMINAR PERSONAL MÉDICO
