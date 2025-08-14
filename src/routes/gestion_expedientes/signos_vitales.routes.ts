@@ -34,7 +34,7 @@ router.get("/expediente/:id_expediente/grafica", getGraficaSignosVitales);
 // RUTAS POR PACIENTE (DEBEN IR ANTES QUE /:id)
 // ==========================================
 
-// ✅ RUTA NUEVA: GET /api/gestion-expedientes/signos-vitales/paciente/:pacienteId
+//    RUTA NUEVA: GET /api/gestion-expedientes/signos-vitales/paciente/:pacienteId
 router.get("/paciente/:pacienteId", getSignosVitalesByPacienteId);
 
 // ==========================================

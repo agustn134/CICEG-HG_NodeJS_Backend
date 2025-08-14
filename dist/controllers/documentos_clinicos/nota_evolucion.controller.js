@@ -169,7 +169,7 @@ const createNotaEvolucion = async (req, res) => {
         console.log('🔍 Ejecutando INSERT con', values.length, 'parámetros (debe ser 32)');
         console.log('🔍 Valores:', values);
         const response = await database_1.default.query(query, values);
-        console.log('✅ INSERT exitoso:', response.rows[0]);
+        console.log('   INSERT exitoso:', response.rows[0]);
         return res.status(201).json({
             success: true,
             message: 'Nota de evolución creada correctamente',

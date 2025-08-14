@@ -168,7 +168,7 @@ exports.EmailService = void 0;
 //         `
 //       };
 //       await this.transporter.sendMail(mailOptions);
-//       console.log('✅ Correo de recuperación enviado a:', email);
+//       console.log('   Correo de recuperación enviado a:', email);
 //       return true;
 //     } catch (error) {
 //       console.error('❌ Error enviando correo:', error);
@@ -178,7 +178,7 @@ exports.EmailService = void 0;
 //   async testConnection(): Promise<boolean> {
 //     try {
 //       await this.transporter.verify();
-//       console.log('✅ Conexión de email establecida correctamente');
+//       console.log('   Conexión de email establecida correctamente');
 //       return true;
 //     } catch (error) {
 //       console.error('❌ Error en conexión de email:', error);
@@ -493,7 +493,7 @@ class EmailService {
         `
             };
             await this.transporter.sendMail(mailOptions);
-            console.log('✅ Correo de recuperación enviado a:', email);
+            console.log('   Correo de recuperación enviado a:', email);
             return true;
         }
         catch (error) {
@@ -504,7 +504,7 @@ class EmailService {
     async testConnection() {
         try {
             await this.transporter.verify();
-            console.log('✅ Conexión de email establecida correctamente');
+            console.log('   Conexión de email establecida correctamente');
             return true;
         }
         catch (error) {

@@ -241,7 +241,7 @@ export const createNotaEvolucion = async (req: Request, res: Response): Promise<
 
     const response: QueryResult = await pool.query(query, values);
 
-    console.log('✅ INSERT exitoso:', response.rows[0]);
+    console.log('   INSERT exitoso:', response.rows[0]);
 
     return res.status(201).json({
       success: true,

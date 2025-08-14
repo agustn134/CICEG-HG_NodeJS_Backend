@@ -27,7 +27,7 @@ let query = `
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     e.notas_administrativas,
@@ -103,7 +103,7 @@ let query = `
     if (buscar) {
   query += ` AND (
     UPPER(e.numero_expediente) LIKE UPPER($${paramCounter}) OR
-    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${paramCounter}) OR  -- ✅ NUEVO FILTRO
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${paramCounter}) OR  --    NUEVO FILTRO
     UPPER(p.nombre) LIKE UPPER($${paramCounter}) OR 
     UPPER(p.apellido_paterno) LIKE UPPER($${paramCounter}) OR 
     UPPER(p.apellido_materno) LIKE UPPER($${paramCounter}) OR
@@ -168,7 +168,7 @@ let query = `
     if (buscar) {
   countQuery += ` AND (
     UPPER(e.numero_expediente) LIKE UPPER($${countParamCounter}) OR
-    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${countParamCounter}) OR  -- ✅ NUEVO FILTRO
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${countParamCounter}) OR  --    NUEVO FILTRO
     UPPER(p.nombre) LIKE UPPER($${countParamCounter}) OR 
     UPPER(p.apellido_paterno) LIKE UPPER($${countParamCounter}) OR 
     UPPER(p.apellido_materno) LIKE UPPER($${countParamCounter}) OR
@@ -469,7 +469,7 @@ export const buscarExpedientes = async (req: Request, res: Response): Promise<Re
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_paciente,
@@ -483,7 +483,7 @@ export const buscarExpedientes = async (req: Request, res: Response): Promise<Re
   LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
   WHERE (
     UPPER(e.numero_expediente) LIKE UPPER($1) OR
-    UPPER(e.numero_expediente_administrativo) LIKE UPPER($1) OR  -- ✅ NUEVO FILTRO
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($1) OR  --    NUEVO FILTRO
     UPPER(p.nombre) LIKE UPPER($1) OR 
     UPPER(p.apellido_paterno) LIKE UPPER($1) OR 
     UPPER(p.apellido_materno) LIKE UPPER($1) OR
@@ -770,7 +770,7 @@ const expedienteQuery = `
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     e.notas_administrativas,
@@ -973,7 +973,7 @@ export const createExpediente = async (req: Request, res: Response): Promise<Res
     const {
   id_paciente,
   numero_expediente,
-  numero_expediente_administrativo,  // ✅ NUEVO CAMPO
+  numero_expediente_administrativo,  //    NUEVO CAMPO
   estado = 'Activo',
   notas_administrativas,
   crear_historia_clinica = false,
@@ -1054,7 +1054,7 @@ export const createExpediente = async (req: Request, res: Response): Promise<Res
     const expedienteResponse: QueryResult = await client.query(insertExpedienteQuery, [
   id_paciente,
   numeroExpedienteFinal,
-  numero_expediente_administrativo?.trim() || null,  // ✅ NUEVO PARÁMETRO
+  numero_expediente_administrativo?.trim() || null,  //    NUEVO PARÁMETRO
   estado,
   notas_administrativas?.trim() || null
 ]);
@@ -1172,7 +1172,7 @@ export const updateExpediente = async (req: Request, res: Response): Promise<Res
     const { id } = req.params;
     const {
   estado,
-  numero_expediente_administrativo,  // ✅ NUEVO CAMPO
+  numero_expediente_administrativo,  //    NUEVO CAMPO
   notas_administrativas,
   id_medico_modificador
 } = req.body;
@@ -1245,7 +1245,7 @@ export const updateExpediente = async (req: Request, res: Response): Promise<Res
   UPDATE expediente 
   SET 
     estado = COALESCE($1, estado),
-    numero_expediente_administrativo = COALESCE($2, numero_expediente_administrativo),  -- ✅ NUEVO CAMPO
+    numero_expediente_administrativo = COALESCE($2, numero_expediente_administrativo),  --    NUEVO CAMPO
     notas_administrativas = COALESCE($3, notas_administrativas)
   WHERE id_expediente = $4
   RETURNING *
@@ -1253,7 +1253,7 @@ export const updateExpediente = async (req: Request, res: Response): Promise<Res
     
     const response: QueryResult = await client.query(updateQuery, [
   estado || null,
-  numero_expediente_administrativo?.trim() || null,  // ✅ NUEVO PARÁMETRO
+  numero_expediente_administrativo?.trim() || null,  //    NUEVO PARÁMETRO
   notas_administrativas?.trim() || null,
   id
 ]);
@@ -1894,7 +1894,7 @@ export const getExpedienteByPacienteId = async (req: Request, res: Response): Pr
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     e.notas_administrativas,
@@ -1952,7 +1952,7 @@ export const getExpedienteByPacienteId = async (req: Request, res: Response): Pr
   data: {
     id_expediente: expedienteData.id_expediente,
     numero_expediente: expedienteData.numero_expediente,
-    numero_expediente_administrativo: expedienteData.numero_expediente_administrativo,  // ✅ NUEVO CAMPO
+    numero_expediente_administrativo: expedienteData.numero_expediente_administrativo,  //    NUEVO CAMPO
     fecha_apertura: expedienteData.fecha_apertura,
     estado: expedienteData.estado,
     notas_administrativas: expedienteData.notas_administrativas,
@@ -1996,7 +1996,7 @@ export default {
   updateExpediente,
   deleteExpediente,
   getExpedientesByPaciente,
-  getExpedienteByPacienteId,  // ✅ AGREGAR ESTA LÍNEA
+  getExpedienteByPacienteId,  //    AGREGAR ESTA LÍNEA
   buscarExpedientes,
   getDashboardExpedientes,
   validarAccesoExpediente,

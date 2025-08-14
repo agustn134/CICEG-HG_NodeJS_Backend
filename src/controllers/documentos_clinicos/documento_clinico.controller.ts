@@ -49,7 +49,7 @@ export const getDocumentosClinicos = async (req: Request, res: Response): Promis
     const limitNum = parseInt(limit as string) || 10;
     const offset = (pageNum - 1) * limitNum;
 
-    // ✅ CONSULTA CORREGIDA: estructura correcta de tablas
+    //    CONSULTA CORREGIDA: estructura correcta de tablas
     let baseQuery = `
       SELECT 
         dc.*,
@@ -264,13 +264,13 @@ export const getDocumentosByExpediente = async (req: Request, res: Response): Pr
         e.numero_expediente,
         e.fecha_apertura,
         
-        -- Datos del paciente ✅ CORREGIDO: usar estructura correcta
+        -- Datos del paciente    CORREGIDO: usar estructura correcta
         CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', COALESCE(p.apellido_materno, '')) as nombre_paciente,
         p.fecha_nacimiento,
         p.sexo,
         EXTRACT(YEAR FROM AGE(p.fecha_nacimiento)) as edad,
         
-        -- Datos del médico creador ✅ CORREGIDO: pm_p.nombre en lugar de pm.nombres
+        -- Datos del médico creador    CORREGIDO: pm_p.nombre en lugar de pm.nombres
         CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno, ' ', COALESCE(pm_p.apellido_materno, '')) as medico_creador,
         pm.especialidad as especialidad_medico,
         pm.numero_cedula as cedula_medico,
@@ -283,7 +283,7 @@ export const getDocumentosByExpediente = async (req: Request, res: Response): Pr
         i.diagnostico_ingreso,
         s.nombre as servicio,
         
-        -- Datos de la cama (si aplica) ✅ CORREGIDO: estructura de cama
+        -- Datos de la cama (si aplica)    CORREGIDO: estructura de cama
         c.numero as numero_cama,
         c.area as area_cama,
         c.subarea as subarea_cama

@@ -20,23 +20,23 @@
 
 -- ### **🏥 Aspectos Pediátricos Incluidos:**
 
--- 1. **✅ Antecedentes Perinatales Completos:**
+-- 1. **   Antecedentes Perinatales Completos:**
 --    - Embarazo de 39 semanas, parto vaginal
 --    - Peso al nacer: 3.2 kg, APGAR 8/9
 --    - Sin complicaciones neonatales
 
--- 2. **✅ Desarrollo Psicomotriz:**
+-- 2. **   Desarrollo Psicomotriz:**
 --    - Sostuvo cabeza: 3 meses ✓
 --    - Se sentó: 7 meses ✓
 --    - Desarrollo normal para su edad
 
--- 3. **✅ Esquema de Vacunación:**
+-- 3. **   Esquema de Vacunación:**
 --    - BCG, Hepatitis B (completa)
 --    - Pentavalente (completa)
 --    - Neumococo, Rotavirus (completas)
 --    - Esquema al día para 8 meses
 
--- 4. **✅ Estado Nutricional:**
+-- 4. **   Estado Nutricional:**
 --    - Peso: 8.2 kg (Percentil 50)
 --    - Talla: 68 cm (Percentil 45)
 --    - Estado nutricional normal
@@ -55,11 +55,11 @@
 
 -- ### **🔍 Validaciones Incluidas:**
 
--- ✅ **Validación de CURP** (18 caracteres, formato correcto)  
--- ✅ **Cálculo automático de edad** (8 meses exactos)  
--- ✅ **Validación de desarrollo psicomotriz** (normal)  
--- ✅ **Auditoría completa** del expediente  
--- ✅ **Verificación de esquema de vacunación**  
+--    **Validación de CURP** (18 caracteres, formato correcto)  
+--    **Cálculo automático de edad** (8 meses exactos)  
+--    **Validación de desarrollo psicomotriz** (normal)  
+--    **Auditoría completa** del expediente  
+--    **Verificación de esquema de vacunación**  
 
 -- ## **🎯 Funcionalidades Probadas:**
 
@@ -71,13 +71,13 @@
 -- 6. **Estado nutricional pediátrico**
 
 -- Este caso demuestra que la base de datos maneja correctamente:
--- - ✅ Pacientes pediátricos con todas sus especificidades
--- - ✅ Antecedentes perinatales detallados
--- - ✅ Seguimiento de desarrollo psicomotriz
--- - ✅ Control de inmunizaciones
--- - ✅ Evaluación nutricional pediátrica
--- - ✅ Medicación con dosis pediátricas
--- - ✅ Documentación clínica especializada
+-- -    Pacientes pediátricos con todas sus especificidades
+-- -    Antecedentes perinatales detallados
+-- -    Seguimiento de desarrollo psicomotriz
+-- -    Control de inmunizaciones
+-- -    Evaluación nutricional pediátrica
+-- -    Medicación con dosis pediátricas
+-- -    Documentación clínica especializada
 
 
 -- ==========================================

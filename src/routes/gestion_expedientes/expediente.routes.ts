@@ -7,7 +7,7 @@ import {
   updateExpediente,
   deleteExpediente,
   getExpedientesByPaciente,
-  getExpedienteByPacienteId,  // ✅ AGREGAR ESTA IMPORTACIÓN
+  getExpedienteByPacienteId,  //    AGREGAR ESTA IMPORTACIÓN
   buscarExpedientes,
   getDashboardExpedientes,
   validarAccesoExpediente,
@@ -34,7 +34,7 @@ router.get("/dashboard", getDashboardExpedientes);
 // RUTAS POR PACIENTE (DEBEN IR ANTES QUE /:id)
 // ==========================================
 
-// ✅ RUTA NUEVA: GET /api/gestion-expedientes/expedientes/paciente/:pacienteId/principal
+//    RUTA NUEVA: GET /api/gestion-expedientes/expedientes/paciente/:pacienteId/principal
 router.get("/paciente/:pacienteId/principal", getExpedienteByPacienteId);
 
 // GET /api/gestion-expedientes/expedientes/paciente/:id_paciente - Obtener expedientes de un paciente

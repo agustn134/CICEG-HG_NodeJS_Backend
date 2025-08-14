@@ -16,7 +16,7 @@ const getExpedientes = async (req, res) => {
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     e.notas_administrativas,
@@ -86,7 +86,7 @@ const getExpedientes = async (req, res) => {
         if (buscar) {
             query += ` AND (
     UPPER(e.numero_expediente) LIKE UPPER($${paramCounter}) OR
-    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${paramCounter}) OR  -- ✅ NUEVO FILTRO
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${paramCounter}) OR  --    NUEVO FILTRO
     UPPER(p.nombre) LIKE UPPER($${paramCounter}) OR 
     UPPER(p.apellido_paterno) LIKE UPPER($${paramCounter}) OR 
     UPPER(p.apellido_materno) LIKE UPPER($${paramCounter}) OR
@@ -144,7 +144,7 @@ const getExpedientes = async (req, res) => {
         if (buscar) {
             countQuery += ` AND (
     UPPER(e.numero_expediente) LIKE UPPER($${countParamCounter}) OR
-    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${countParamCounter}) OR  -- ✅ NUEVO FILTRO
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($${countParamCounter}) OR  --    NUEVO FILTRO
     UPPER(p.nombre) LIKE UPPER($${countParamCounter}) OR 
     UPPER(p.apellido_paterno) LIKE UPPER($${countParamCounter}) OR 
     UPPER(p.apellido_materno) LIKE UPPER($${countParamCounter}) OR
@@ -410,7 +410,7 @@ const buscarExpedientes = async (req, res) => {
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     CONCAT(p.nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) as nombre_paciente,
@@ -424,7 +424,7 @@ const buscarExpedientes = async (req, res) => {
   LEFT JOIN internamiento i ON e.id_expediente = i.id_expediente
   WHERE (
     UPPER(e.numero_expediente) LIKE UPPER($1) OR
-    UPPER(e.numero_expediente_administrativo) LIKE UPPER($1) OR  -- ✅ NUEVO FILTRO
+    UPPER(e.numero_expediente_administrativo) LIKE UPPER($1) OR  --    NUEVO FILTRO
     UPPER(p.nombre) LIKE UPPER($1) OR 
     UPPER(p.apellido_paterno) LIKE UPPER($1) OR 
     UPPER(p.apellido_materno) LIKE UPPER($1) OR
@@ -681,7 +681,7 @@ const getExpedienteById = async (req, res) => {
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     e.notas_administrativas,
@@ -868,7 +868,7 @@ const createExpediente = async (req, res) => {
     const client = await database_1.default.connect();
     try {
         await client.query('BEGIN');
-        const { id_paciente, numero_expediente, numero_expediente_administrativo, // ✅ NUEVO CAMPO
+        const { id_paciente, numero_expediente, numero_expediente_administrativo, //    NUEVO CAMPO
         estado = 'Activo', notas_administrativas, crear_historia_clinica = false, id_medico_creador } = req.body;
         // Validaciones básicas
         if (!id_paciente) {
@@ -934,7 +934,7 @@ const createExpediente = async (req, res) => {
         const expedienteResponse = await client.query(insertExpedienteQuery, [
             id_paciente,
             numeroExpedienteFinal,
-            numero_expediente_administrativo?.trim() || null, // ✅ NUEVO PARÁMETRO
+            numero_expediente_administrativo?.trim() || null, //    NUEVO PARÁMETRO
             estado,
             notas_administrativas?.trim() || null
         ]);
@@ -1031,7 +1031,7 @@ const updateExpediente = async (req, res) => {
     try {
         await client.query('BEGIN');
         const { id } = req.params;
-        const { estado, numero_expediente_administrativo, // ✅ NUEVO CAMPO
+        const { estado, numero_expediente_administrativo, //    NUEVO CAMPO
         notas_administrativas, id_medico_modificador } = req.body;
         if (!id || isNaN(parseInt(id))) {
             return res.status(400).json({
@@ -1091,14 +1091,14 @@ const updateExpediente = async (req, res) => {
   UPDATE expediente 
   SET 
     estado = COALESCE($1, estado),
-    numero_expediente_administrativo = COALESCE($2, numero_expediente_administrativo),  -- ✅ NUEVO CAMPO
+    numero_expediente_administrativo = COALESCE($2, numero_expediente_administrativo),  --    NUEVO CAMPO
     notas_administrativas = COALESCE($3, notas_administrativas)
   WHERE id_expediente = $4
   RETURNING *
 `;
         const response = await client.query(updateQuery, [
             estado || null,
-            numero_expediente_administrativo?.trim() || null, // ✅ NUEVO PARÁMETRO
+            numero_expediente_administrativo?.trim() || null, //    NUEVO PARÁMETRO
             notas_administrativas?.trim() || null,
             id
         ]);
@@ -1653,7 +1653,7 @@ const getExpedienteByPacienteId = async (req, res) => {
   SELECT 
     e.id_expediente,
     e.numero_expediente,
-    e.numero_expediente_administrativo,  -- ✅ NUEVO CAMPO
+    e.numero_expediente_administrativo,  --    NUEVO CAMPO
     e.fecha_apertura,
     e.estado,
     e.notas_administrativas,
@@ -1707,7 +1707,7 @@ const getExpedienteByPacienteId = async (req, res) => {
             data: {
                 id_expediente: expedienteData.id_expediente,
                 numero_expediente: expedienteData.numero_expediente,
-                numero_expediente_administrativo: expedienteData.numero_expediente_administrativo, // ✅ NUEVO CAMPO
+                numero_expediente_administrativo: expedienteData.numero_expediente_administrativo, //    NUEVO CAMPO
                 fecha_apertura: expedienteData.fecha_apertura,
                 estado: expedienteData.estado,
                 notas_administrativas: expedienteData.notas_administrativas,
@@ -1749,8 +1749,8 @@ exports.default = {
     updateExpediente: exports.updateExpediente,
     deleteExpediente: exports.deleteExpediente,
     getExpedientesByPaciente: exports.getExpedientesByPaciente,
-    getExpedienteByPacienteId: exports.getExpedienteByPacienteId, // ✅ AGREGAR ESTA LÍNEA
-    buscarExpedientes: // ✅ AGREGAR ESTA LÍNEA
+    getExpedienteByPacienteId: exports.getExpedienteByPacienteId, //    AGREGAR ESTA LÍNEA
+    buscarExpedientes: //    AGREGAR ESTA LÍNEA
     exports.buscarExpedientes,
     getDashboardExpedientes: exports.getDashboardExpedientes,
     validarAccesoExpediente: exports.validarAccesoExpediente,

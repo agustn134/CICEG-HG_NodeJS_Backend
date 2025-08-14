@@ -1195,7 +1195,7 @@ const getSignosVitalesByPacienteId = async (req, res) => {
     try {
         const { pacienteId } = req.params;
         const { limit = 10, offset = 0 } = req.query;
-        // ✅ CONSULTA CORREGIDA: Relación correcta a través de documento_clinico
+        //    CONSULTA CORREGIDA: Relación correcta a través de documento_clinico
         const query = `
       SELECT 
         sv.id_signos_vitales,
@@ -1215,7 +1215,7 @@ const getSignosVitalesByPacienteId = async (req, res) => {
         -- Datos del expediente
         e.numero_expediente,
         
-        -- Datos del médico que registró ✅ CORREGIDO: pm_p.nombre en lugar de pm.nombres
+        -- Datos del médico que registró    CORREGIDO: pm_p.nombre en lugar de pm.nombres
         CONCAT(pm_p.nombre, ' ', pm_p.apellido_paterno) as medico_registra,
         pm.especialidad as especialidad_medico,
         
@@ -1243,7 +1243,7 @@ const getSignosVitalesByPacienteId = async (req, res) => {
         END as saturacion_anormal
         
       FROM signos_vitales sv
-      -- ✅ RELACIÓN CORREGIDA: a través de documento_clinico, no directamente
+      --    RELACIÓN CORREGIDA: a través de documento_clinico, no directamente
       JOIN documento_clinico dc ON sv.id_documento = dc.id_documento
       JOIN expediente e ON dc.id_expediente = e.id_expediente
       JOIN paciente pac ON e.id_paciente = pac.id_paciente

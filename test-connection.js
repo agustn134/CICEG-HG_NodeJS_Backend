@@ -21,10 +21,10 @@ async function testConnection() {
   try {
     console.log('\nIntentando conectar a PostgreSQL...');
     const client = await pool.connect();
-    console.log('✅ Conexión exitosa a PostgreSQL');
+    console.log('   Conexión exitosa a PostgreSQL');
     
     const result = await client.query('SELECT NOW()');
-    console.log('✅ Consulta exitosa:', result.rows[0]);
+    console.log('   Consulta exitosa:', result.rows[0]);
     
     client.release();
     await pool.end();

@@ -34,7 +34,7 @@ class LogoManagerService {
             await this.eliminarLogoImportadoAnterior(tipo);
             // 3. Guardar nuevo archivo con nombre estándar
             fs_1.default.writeFileSync(rutaCompleta, archivo.buffer);
-            console.log(`✅ Logo ${tipo} guardado como: ${nuevoNombre}`);
+            console.log(`   Logo ${tipo} guardado como: ${nuevoNombre}`);
             // 4. Retornar ruta para la BD
             return `/uploads/logos/${nuevoNombre}`;
         }

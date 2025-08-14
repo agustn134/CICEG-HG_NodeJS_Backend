@@ -223,7 +223,7 @@ export const getPacientes = async (req: Request, res: Response): Promise<Respons
 // ❌ CONSULTA INCORRECTA (línea ~189):
 // SELECT e.fecha_creacion  <-- ESTA COLUMNA NO EXISTE
 
-// ✅ CONSULTA CORREGIDA:
+//    CONSULTA CORREGIDA:
 export const getPacienteById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -266,7 +266,7 @@ export const getPacienteById = async (req: Request, res: Response): Promise<void
         -- Datos del expediente (si existe)
         e.id_expediente,
         e.numero_expediente,
-        e.fecha_apertura,  -- ✅ CORREGIDO: era fecha_creacion
+        e.fecha_apertura,  --    CORREGIDO: era fecha_creacion
         e.estado as estado_expediente,
         e.notas_administrativas,
         
@@ -547,7 +547,7 @@ export const createPaciente = async (req: Request, res: Response): Promise<Respo
       `;
       
       await client.query(updatePersonaQuery, [tipo_sangre_id, id_persona]);
-      console.log(`✅ Persona ${id_persona} actualizada con tipo de sangre ID: ${tipo_sangre_id}`);
+      console.log(`   Persona ${id_persona} actualizada con tipo de sangre ID: ${tipo_sangre_id}`);
     }
     
     // Insertar nuevo paciente

@@ -35,7 +35,7 @@ export class InicializadorSistema {
       
       if (!fs.existsSync(rutaArchivo)) {
         fs.writeFileSync(rutaArchivo, archivo.contenido);
-        console.log(`✅ Creado: ${archivo.nombre} como SVG`);
+        console.log(`   Creado: ${archivo.nombre} como SVG`);
       }
     }
 
@@ -77,7 +77,7 @@ export class InicializadorSistema {
       for (const origen of posiblesFavicons) {
         if (fs.existsSync(origen)) {
           fs.copyFileSync(origen, destinoFavicon);
-          console.log(`✅ Favicon copiado desde: ${origen}`);
+          console.log(`   Favicon copiado desde: ${origen}`);
           return;
         }
       }
@@ -85,7 +85,7 @@ export class InicializadorSistema {
       // Si no se encuentra, crear uno SVG simple
       const faviconSVG = this.crearLogoSVG('H', '#1e40af', 32, 32);
       fs.writeFileSync(path.join(uploadPath, 'favicon.svg'), faviconSVG);
-      console.log('✅ Favicon SVG creado como fallback');
+      console.log('   Favicon SVG creado como fallback');
     }
   }
 }

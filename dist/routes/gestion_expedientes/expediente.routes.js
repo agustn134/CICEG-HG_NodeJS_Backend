@@ -14,7 +14,7 @@ router.get("/dashboard", expediente_controller_1.getDashboardExpedientes);
 // ==========================================
 // RUTAS POR PACIENTE (DEBEN IR ANTES QUE /:id)
 // ==========================================
-// ✅ RUTA NUEVA: GET /api/gestion-expedientes/expedientes/paciente/:pacienteId/principal
+//    RUTA NUEVA: GET /api/gestion-expedientes/expedientes/paciente/:pacienteId/principal
 router.get("/paciente/:pacienteId/principal", expediente_controller_1.getExpedienteByPacienteId);
 // GET /api/gestion-expedientes/expedientes/paciente/:id_paciente - Obtener expedientes de un paciente
 router.get("/paciente/:id_paciente", expediente_controller_1.getExpedientesByPaciente);

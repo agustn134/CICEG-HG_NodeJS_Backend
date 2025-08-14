@@ -44,7 +44,7 @@ class LogoManagerService {
       // 3. Guardar nuevo archivo con nombre estándar
       fs.writeFileSync(rutaCompleta, archivo.buffer);
       
-      console.log(`✅ Logo ${tipo} guardado como: ${nuevoNombre}`);
+      console.log(`   Logo ${tipo} guardado como: ${nuevoNombre}`);
       
       // 4. Retornar ruta para la BD
       return `/uploads/logos/${nuevoNombre}`;

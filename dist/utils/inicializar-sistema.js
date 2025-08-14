@@ -35,7 +35,7 @@ class InicializadorSistema {
             const rutaArchivo = path_1.default.join(uploadPath, archivo.nombre.replace('.png', '.svg'));
             if (!fs_1.default.existsSync(rutaArchivo)) {
                 fs_1.default.writeFileSync(rutaArchivo, archivo.contenido);
-                console.log(`✅ Creado: ${archivo.nombre} como SVG`);
+                console.log(`   Creado: ${archivo.nombre} como SVG`);
             }
         }
         // Copiar favicon si está disponible
@@ -68,14 +68,14 @@ class InicializadorSistema {
             for (const origen of posiblesFavicons) {
                 if (fs_1.default.existsSync(origen)) {
                     fs_1.default.copyFileSync(origen, destinoFavicon);
-                    console.log(`✅ Favicon copiado desde: ${origen}`);
+                    console.log(`   Favicon copiado desde: ${origen}`);
                     return;
                 }
             }
             // Si no se encuentra, crear uno SVG simple
             const faviconSVG = this.crearLogoSVG('H', '#1e40af', 32, 32);
             fs_1.default.writeFileSync(path_1.default.join(uploadPath, 'favicon.svg'), faviconSVG);
-            console.log('✅ Favicon SVG creado como fallback');
+            console.log('   Favicon SVG creado como fallback');
         }
     }
 }

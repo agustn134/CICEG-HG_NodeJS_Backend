@@ -19,7 +19,7 @@ router.get("/expediente/:id_expediente/grafica", signos_vitales_controller_1.get
 // ==========================================
 // RUTAS POR PACIENTE (DEBEN IR ANTES QUE /:id)
 // ==========================================
-// ✅ RUTA NUEVA: GET /api/gestion-expedientes/signos-vitales/paciente/:pacienteId
+//    RUTA NUEVA: GET /api/gestion-expedientes/signos-vitales/paciente/:pacienteId
 router.get("/paciente/:pacienteId", signos_vitales_controller_1.getSignosVitalesByPacienteId);
 // ==========================================
 // RUTAS BÁSICAS CRUD

@@ -507,7 +507,7 @@ export const createPersonalMedico = async (req: Request, res: Response): Promise
     const personaResponse = await client.query(insertPersonaQuery, insertPersonaValues);
     const nuevaPersona = personaResponse.rows[0];
     
-    console.log('✅ Persona creada:', nuevaPersona);
+    console.log('   Persona creada:', nuevaPersona);
     
     // ==========================================
     // INSERTAR PERSONAL MÉDICO CON CREDENCIALES
@@ -544,7 +544,7 @@ export const createPersonalMedico = async (req: Request, res: Response): Promise
     const personalMedicoResponse = await client.query(insertPersonalMedicoQuery, insertPersonalMedicoValues);
     const nuevoPersonalMedico = personalMedicoResponse.rows[0];
     
-    console.log('✅ Personal médico creado:', nuevoPersonalMedico);
+    console.log('   Personal médico creado:', nuevoPersonalMedico);
     
     // ==========================================
     // COMMIT TRANSACCIÓN

@@ -76,7 +76,7 @@ const requestPasswordReset = async (req, res) => {
             });
         }
         const user = userResult.rows[0];
-        console.log('✅ Usuario encontrado:', user.nombre_completo);
+        console.log('   Usuario encontrado:', user.nombre_completo);
         // Generar token de recuperación
         const resetToken = crypto_1.default.randomBytes(32).toString('hex');
         const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hora
@@ -101,7 +101,7 @@ const requestPasswordReset = async (req, res) => {
             resetTokenExpiry,
             req.ip || '0.0.0.0'
         ]);
-        console.log('✅ Token guardado en BD');
+        console.log('   Token guardado en BD');
         // Enviar correo
         const emailSent = await email_service_1.default.sendPasswordResetEmail(email, resetToken);
         if (!emailSent) {
@@ -110,7 +110,7 @@ const requestPasswordReset = async (req, res) => {
                 message: 'Error al enviar el correo de recuperación'
             });
         }
-        console.log('✅ Correo enviado exitosamente');
+        console.log('   Correo enviado exitosamente');
         return res.status(200).json({
             success: true,
             message: 'Se ha enviado un enlace de recuperación a su correo electrónico'
@@ -245,8 +245,8 @@ exports.validateResetToken = validateResetToken;
 //       'UPDATE password_reset_tokens SET is_active = false, used_at = NOW(), invalidated_reason = $1 WHERE token = $2', 
 //       ['Contraseña cambiada exitosamente', token]
 //     );
-//     console.log('✅ Contraseña restablecida exitosamente para:', email);
-//     console.log('✅ Hash generado y almacenado correctamente');
+//     console.log('   Contraseña restablecida exitosamente para:', email);
+//     console.log('   Hash generado y almacenado correctamente');
 //     return res.status(200).json({
 //       success: true,
 //       message: 'Contraseña restablecida exitosamente'
@@ -295,7 +295,7 @@ const resetPassword = async (req, res) => {
         let updateParams;
         switch (tipo_usuario) {
             case 'medico':
-                // ✅ CORREGIDO: Solo usar password_texto
+                //    CORREGIDO: Solo usar password_texto
                 updateQuery = `
           UPDATE personal_medico 
           SET password_texto = $1, fecha_actualizacion = CURRENT_TIMESTAMP
@@ -305,7 +305,7 @@ const resetPassword = async (req, res) => {
                 updateParams = [newPassword, id_usuario_referencia];
                 break;
             case 'administrador':
-                // ✅ CORREGIDO: Solo usar password_texto (sin contrasena hasheada)
+                //    CORREGIDO: Solo usar password_texto (sin contrasena hasheada)
                 updateQuery = `
           UPDATE administrador 
           SET password_texto = $1, fecha_actualizacion = CURRENT_TIMESTAMP
@@ -329,7 +329,7 @@ const resetPassword = async (req, res) => {
         }
         // Marcar token como usado
         await database_1.default.query('UPDATE password_reset_tokens SET is_active = false, used_at = NOW(), invalidated_reason = $1 WHERE token = $2', ['Contraseña cambiada exitosamente', token]);
-        console.log('✅ Contraseña restablecida exitosamente para:', email);
+        console.log('   Contraseña restablecida exitosamente para:', email);
         return res.status(200).json({
             success: true,
             message: 'Contraseña restablecida exitosamente'

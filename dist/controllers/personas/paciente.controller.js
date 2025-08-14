@@ -205,7 +205,7 @@ exports.getPacientes = getPacientes;
 // };
 // ❌ CONSULTA INCORRECTA (línea ~189):
 // SELECT e.fecha_creacion  <-- ESTA COLUMNA NO EXISTE
-// ✅ CONSULTA CORREGIDA:
+//    CONSULTA CORREGIDA:
 const getPacienteById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -247,7 +247,7 @@ const getPacienteById = async (req, res) => {
         -- Datos del expediente (si existe)
         e.id_expediente,
         e.numero_expediente,
-        e.fecha_apertura,  -- ✅ CORREGIDO: era fecha_creacion
+        e.fecha_apertura,  --    CORREGIDO: era fecha_creacion
         e.estado as estado_expediente,
         e.notas_administrativas,
         
@@ -486,7 +486,7 @@ const createPaciente = async (req, res) => {
         WHERE id_persona = $2
       `;
             await client.query(updatePersonaQuery, [tipo_sangre_id, id_persona]);
-            console.log(`✅ Persona ${id_persona} actualizada con tipo de sangre ID: ${tipo_sangre_id}`);
+            console.log(`   Persona ${id_persona} actualizada con tipo de sangre ID: ${tipo_sangre_id}`);
         }
         // Insertar nuevo paciente
         const insertQuery = `
