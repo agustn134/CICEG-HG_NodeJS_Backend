@@ -182,54 +182,6 @@ app.get('/api/sistema/info', (req, res) => {
 });
 
 
-app.get('/api/134', (req, res) => {
-  return ResponseHelper.success(res, ' Firma del desarrollador', {
-    ascii_art: `
-    
-    ░█████╗░░██████╗░██╗░░░██╗░██████╗  ████████╗██████╗░░█████╗░██████╗░██████╗░░█████╗░
-    ██╔══██╗██╔════╝░██║░░░██║██╔════╝  ╚══██╔══╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗
-    ███████║██║░░██╗░██║░░░██║╚█████╗░  ░░░██║░░░██████╔╝███████║██████╔╝██████╔╝███████║
-    ██╔══██║██║░░╚██╗██║░░░██║░╚═══██╗  ░░░██║░░░██╔═══╝░██╔══██║██╔══██╗██╔══██╗██╔══██║
-    ██║░░██║╚██████╔╝╚██████╔╝██████╔╝  ░░░██║░░░██║░░░░░██║░░██║██║░░██║██║░░██║██║░░██║
-    ╚═╝░░╚═╝░╚═════╝░░╚═════╝░╚═════╝░  ░░░╚═╝░░░╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝
-    `,
-    desarrollador: {
-      tag: 'agus_tparra',
-      aka: ['8-4-3 Crew'],
-      ubicacion: {
-        origen: 'Casa 843 - Donde nacieron los sueños',
-        crecimiento: 'Barrio 134 - Donde se forjó el carácter',
-        destino: 'El futuro que estoy construyendo línea por línea'
-      }
-    },
-    stats: {
-      proyectos_terminados: 'Los que han cambiado vidas',
-      bugs_resueltos: 'Infinitos y contando',
-      cafe_consumido: 'Litros que alimentan el algoritmo',
-      beats_producidos: 'Cada commit suena diferente',
-    },
-    crew: {
-      '843': 'Donde aprendí que los sueños no se piden, se construyen',
-      '134': 'Donde entendí que el código puede cambiar todo',
-      'sin_miedo': 'Al futuro, al cambio, al éxito'
-    },
-    mensaje_personal: {
-      para_quien_lea_esto: 'Este endpoint no es solo código, es mi historia.',
-      dedicatoria: 'Para los que vienen del barrio y sueñan con el cielo.'
-    },
-    easter_eggs: {
-      hidden_message: 'Si llegaste hasta aquí, respetas el hustle',
-    },
-    timestamps: {
-      nacimiento: '2004-09-05T01:03:04.000Z',
-      proyecto_ciceg: new Date().toISOString(),
-    },
-    contacto: {
-      music: 'soul',
-      ubicacion: 'Entre el 843 y el 134, construyendo puente'
-    },
-  });
-});
 
 
 // ==========================================

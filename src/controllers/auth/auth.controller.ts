@@ -3,9 +3,7 @@ import { Request, Response } from 'express';
 import { QueryResult } from 'pg';
 import pool from '../../config/database';
 import * as jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt'; // 🔥 IMPORTANTE: AGREGAR ESTA LÍNEA
-
-// 🔥 TIPADO EXPLÍCITO CORRECTO
+import bcrypt from 'bcrypt'; 
 const JWT_SECRET: jwt.Secret = process.env.JWT_SECRET || 'hospital_ciceg_secret_key_2025';
 const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '24h';
 

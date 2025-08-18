@@ -1,4 +1,6 @@
 // src/routes/index.ts
+// Anexo B.1: Configuración de rutas principales del sistema
+// src/routes/index.ts - 57 endpoints organizados en 6 módulos
 import { Router } from 'express';
 
 // ==========================================

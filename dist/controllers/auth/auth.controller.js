@@ -39,8 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.cambiarPassword = exports.logout = exports.verifyToken = exports.login = void 0;
 const database_1 = __importDefault(require("../../config/database"));
 const jwt = __importStar(require("jsonwebtoken"));
-const bcrypt_1 = __importDefault(require("bcrypt")); // 🔥 IMPORTANTE: AGREGAR ESTA LÍNEA
-// 🔥 TIPADO EXPLÍCITO CORRECTO
+const bcrypt_1 = __importDefault(require("bcrypt"));
 const JWT_SECRET = process.env.JWT_SECRET || 'hospital_ciceg_secret_key_2025';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 // ==========================================

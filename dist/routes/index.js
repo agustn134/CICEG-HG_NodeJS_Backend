@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // src/routes/index.ts
+// Anexo B.1: Configuración de rutas principales del sistema
+// src/routes/index.ts - 57 endpoints organizados en 6 módulos
 const express_1 = require("express");
 // ==========================================
 // IMPORTAR TODAS LAS RUTAS DE CATÁLOGOS
