@@ -1,63 +1,4 @@
-# # docker-compose.yml
-# version: '3.8'
-
-# services:
-#   api:
-#     build: .
-#     container_name: ciceg-hg-api
-#     restart: unless-stopped
-#     ports:
-#       - "3000:3000"
-#     environment:
-#       NODE_ENV: production
-#       PORT: 3000
-#       DB_HOST: postgres
-#       DB_USER: postgres
-#       DB_PASSWORD: password
-#       DB_NAME: bd_sicec_prueba7
-#       DB_PORT: 5432
-#     depends_on:
-#       - postgres
-#     networks:
-#       - app-network
-
-#   postgres:
-#     image: postgres:15-alpine
-#     container_name: ciceg-hg-db
-#     restart: unless-stopped
-#     ports:
-#       - "5432:5432"
-#     environment:
-#       POSTGRES_DB: bd_sicec_prueba7
-#       POSTGRES_USER: postgres
-#       POSTGRES_PASSWORD: password
-#     volumes:
-#       - postgres_data:/var/lib/postgresql/data
-#     networks:
-#       - app-network
-
-# volumes:
-#   postgres_data:
-
-# networks:
-#   app-network:
-#     driver: bridge
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# docker-compose.yml
+# C:\Proyectos\CICEG-HG_NodeJS_Backend\docker-compose.yml
 version: '3.8'
 
 services:
@@ -68,12 +9,12 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: bd_sicec_prueba7
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ciceg_hospital  # ← Cambié el nombre para que coincida
+      POSTGRES_USER: agustin       # ← Cambié para que coincida con tu .env
+      POSTGRES_PASSWORD: 954954    # ← Cambié para que coincida con tu .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql  # 👈 MONTAR init.sql
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-network
 
@@ -87,9 +28,9 @@ services:
       NODE_ENV: production
       PORT: 3000
       DB_HOST: postgres
-      DB_USER: postgres
-      DB_PASSWORD: password
-      DB_NAME: bd_sicec_prueba7
+      DB_USER: agustin            # ← Cambié
+      DB_PASSWORD: 954954         # ← Cambié  
+      DB_NAME: ciceg_hospital     # ← Cambié
       DB_PORT: 5432
     depends_on:
       - postgres

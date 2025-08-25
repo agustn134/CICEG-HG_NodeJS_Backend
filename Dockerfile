@@ -28,15 +28,6 @@
 # CMD ["node", "dist/index.js"]
 
 
-
-
-
-
-
-
-
-
-
 # Fase 1: Construir y compilar
 FROM node:20-alpine AS builder
 WORKDIR /app
